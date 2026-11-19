@@ -3,7 +3,15 @@
   const cv = document.getElementById('view'), ctx = cv.getContext('2d');
   const off = document.createElement('canvas'), octx = off.getContext('2d');
   let img = null, frame = null, scene = null, sceneKey = 'square', tod = 'day';
-  let camX = 0, camY = 0, zoom = 3, dpr = 1, ready = false, follow = false;
+  let camX = 0, camY = 0, zoom = 3, zoomT = 3, anchor = null, dpr = 1, ready = false, follow = false;
+  const zMin = () => Math.max(0.2, Math.min(cv.width / (E.W || 1), cv.height / (E.H || 1)) * 0.8), zClamp = z => Math.max(zMin(), Math.min(12, z));
+  // change zoom while keeping the world point under (cx, cy) fixed on screen
+  function setZoom(z, cx, cy) {
+    if (cx === undefined) { cx = innerWidth / 2; cy = innerHeight / 2; }
+    const bx = camX + (cx * dpr - cv.width / 2) / zoom, by = camY + (cy * dpr - cv.height / 2) / zoom;
+    zoom = zClamp(z);
+    camX = bx - (cx * dpr - cv.width / 2) / zoom; camY = by - (cy * dpr - cv.height / 2) / zoom;
+  }
 
   const TIMES = {
     day: { label: 'Day', L: [-0.45, 0.75, 0.8], sun: [0.80, 0.66, 0.44], amb: [0.50, 0.52, 0.70], fill: [0.16, 0.15, 0.13], night: false, lamp: 0, bg: [24, 20, 30] },
@@ -36,7 +44,7 @@
   function resize() {
     dpr = Math.min(3, window.devicePixelRatio || 1);
     cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(innerHeight * dpr);
-    if (!resize.done) { zoom = Math.max(1, Math.round(Math.min(cv.width, cv.height) / 780)); resize.done = true; }
+    if (!resize.done) { zoom = Math.max(1, Math.round(Math.min(cv.width, cv.height) / 780)); zoomT = zoom; resize.done = true; }
   }
   addEventListener('resize', resize); resize();
 
@@ -51,20 +59,22 @@
     buttons('times', { day: 'Day', dusk: 'Dusk', night: 'Night' }, () => tod, k => { tod = k; busy(rebake); });
   }
   function hint() { document.getElementById('hint').textContent = scene.blurb || ''; document.getElementById('hint').style.display = scene.blurb ? '' : 'none'; }
-  document.getElementById('zi').onclick = () => { zoom = Math.min(10, zoom + 1); };
-  document.getElementById('zo').onclick = () => { zoom = Math.max(1, zoom - 1); };
+  document.getElementById('zi').onclick = () => { zoomT = zClamp(zoomT * 1.35); anchor = null; };
+  document.getElementById('zo').onclick = () => { zoomT = zClamp(zoomT / 1.35); anchor = null; };
   const info = document.getElementById('info');
   function showInfo(p) { info.innerHTML = '<b>' + p.name + '</b><br><i>' + p.doing + '</i>'; }
 
   /* ---------- input ---------- */
-  const ptr = new Map(); let moved = 0, pinch0 = 0, zoom0 = 1;
+  const ptr = new Map(); let moved = 0, pinch0 = 0, zoom0 = 1, pmx = 0, pmy = 0;
   const toLogical = (cx, cy) => [camX + (cx * dpr - cv.width / 2) / zoom, camY + (cy * dpr - cv.height / 2) / zoom];
-  cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); ptr.set(e.pointerId, [e.clientX, e.clientY]); moved = 0; if (ptr.size === 2) { const a = [...ptr.values()]; pinch0 = Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1]); zoom0 = zoom; } });
+  cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); ptr.set(e.pointerId, [e.clientX, e.clientY]); moved = 0; if (ptr.size === 2) { const a = [...ptr.values()]; pinch0 = Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1]) || 1; zoom0 = zoom; pmx = (a[0][0] + a[1][0]) / 2; pmy = (a[0][1] + a[1][1]) / 2; } });
   cv.addEventListener('pointermove', e => {
     const p = ptr.get(e.pointerId); if (!p) return;
     const dx = e.clientX - p[0], dy = e.clientY - p[1]; p[0] = e.clientX; p[1] = e.clientY;
     if (ptr.size === 1) { moved += Math.abs(dx) + Math.abs(dy); if (moved > 6) { camX -= dx * dpr / zoom; camY -= dy * dpr / zoom; follow = false; } }
-    else if (ptr.size === 2) { const a = [...ptr.values()], d = Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1]); zoom = Math.max(1, Math.min(10, Math.round(zoom0 * d / pinch0))); moved = 99; }
+    else if (ptr.size === 2) { const a = [...ptr.values()], d = Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1]), mx = (a[0][0] + a[1][0]) / 2, my = (a[0][1] + a[1][1]) / 2;
+      camX -= (mx - pmx) * dpr / zoom; camY -= (my - pmy) * dpr / zoom; pmx = mx; pmy = my;
+      setZoom(zoom0 * d / pinch0, mx, my); zoomT = zoom; moved = 99; follow = false; }
   });
   const up = e => {
     if (!ptr.has(e.pointerId)) return; ptr.delete(e.pointerId);
@@ -77,7 +87,7 @@
     }
   };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
-  cv.addEventListener('wheel', e => { e.preventDefault(); zoom = Math.max(1, Math.min(10, zoom + (e.deltaY < 0 ? 1 : -1))); }, { passive: false });
+  cv.addEventListener('wheel', e => { e.preventDefault(); zoomT = zClamp(zoomT * Math.exp(-Math.max(-120, Math.min(120, e.deltaY)) * 0.0022)); anchor = [e.clientX, e.clientY]; }, { passive: false });
   let marker = null;
 
   /* ---------- loop ---------- */
@@ -86,6 +96,7 @@
     requestAnimationFrame(tick);
     if (!ready) return;
     const dt = Math.min(0.1, (now - last) / 1000); last = now; time += dt;
+    if (Math.abs(zoomT - zoom) > zoom * 0.001) { const z = zoom + (zoomT - zoom) * Math.min(1, dt * 12); anchor ? setZoom(z, anchor[0], anchor[1]) : setZoom(z); } else zoomT = zClamp(zoomT);
     Sim.update(dt);
     E.begin(frame);
     if (marker) { marker[2] -= dt; if (marker[2] <= 0) marker = null; else { const mx = Math.round(E.sx(marker[0], marker[1])), my = Math.round(E.sy(marker[0], marker[1], 0)), r = 10 - Math.floor(marker[2] * 8); for (let a = 0; a < 32; a++) E.px(mx + Math.round(Math.cos(a * 0.19635) * r * 1.6), my + Math.round(Math.sin(a * 0.19635) * r * 0.8), marker[0] + marker[1] + 0.02, 0xffe27a); } }
@@ -94,17 +105,17 @@
     const vw = cv.width / zoom, vh = cv.height / zoom;
     camX = Math.max(Math.min(vw / 2, E.W / 2), Math.min(Math.max(E.W - vw / 2, E.W / 2), camX));
     camY = Math.max(Math.min(vh / 2, E.H / 2), Math.min(Math.max(E.H - vh / 2, E.H / 2), camY));
-    const x0 = Math.round(camX - vw / 2), y0 = Math.round(camY - vh / 2);
-    const dx0 = Math.max(0, x0), dy0 = Math.max(0, y0), dw = Math.min(E.W, Math.ceil(x0 + vw) + 1) - dx0, dh = Math.min(E.H, Math.ceil(y0 + vh) + 1) - dy0;
+    const x0 = camX - vw / 2, y0 = camY - vh / 2;
+    const dx0 = Math.max(0, Math.floor(x0)), dy0 = Math.max(0, Math.floor(y0)), dw = Math.min(E.W, Math.ceil(x0 + vw) + 1) - dx0, dh = Math.min(E.H, Math.ceil(y0 + vh) + 1) - dy0;
     octx.putImageData(img, 0, 0, dx0, dy0, dw, dh);
     const bg = E.light.bg; ctx.fillStyle = 'rgb(' + bg[0] + ',' + bg[1] + ',' + bg[2] + ')'; ctx.fillRect(0, 0, cv.width, cv.height);
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(off, dx0, dy0, dw, dh, (dx0 - x0) * zoom, (dy0 - y0) * zoom, dw * zoom, dh * zoom);
+    ctx.imageSmoothingEnabled = zoom < 1;
+    ctx.drawImage(off, dx0, dy0, dw, dh, Math.round((dx0 - x0) * zoom), Math.round((dy0 - y0) * zoom), dw * zoom, dh * zoom);
   }
 
   const h = (location.hash || '').slice(1); if (Scenes[h]) sceneKey = h;
   ui();
   // test hooks (used by the screenshot script)
-  window.__ks = { load: k => { load(k); ui(); hint(); }, time: k => { tod = k; rebake(); ui(); }, cam: (x, y, z) => { camX = E.sx(x, y); camY = E.sy(x, y, 0); if (z) zoom = z; }, step: s => { for (let i = 0; i < s * 30; i++) Sim.update(1 / 30); time += s; } };
+  window.__ks = { load: k => { load(k); ui(); hint(); }, time: k => { tod = k; rebake(); ui(); }, cam: (x, y, z) => { camX = E.sx(x, y); camY = E.sy(x, y, 0); if (z) zoom = zoomT = z; }, step: s => { for (let i = 0; i < s * 30; i++) Sim.update(1 / 30); time += s; } };
   busy(() => { const t0 = performance.now(); load(sceneKey); hint(); console.log('bake ms', Math.round(performance.now() - t0)); requestAnimationFrame(tick); });
 })();

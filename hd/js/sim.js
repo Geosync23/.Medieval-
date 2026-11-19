@@ -298,7 +298,7 @@ const Sim = {};
     if (waterInfo && waterInfo.length) drawWater(t);
     const list = people.slice().sort((a, b) => (a.x + a.y) - (b.x + b.y));
     for (const p of list) drawPerson(p, t);
-    drawJets(t); drawSmoke(t); drawFlags(t);
+    drawJets(t); if (Sim.fx) for (const f of Sim.fx) f(t); drawSmoke(t); drawFlags(t);
   };
   Sim.personAt = function (lx, ly) {
     let best = null, bd = 26;
