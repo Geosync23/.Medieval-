@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>King Simulator — Pixel Art Tests</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #14111a; overflow: hidden; color: #f1e6c8;
+    font-family: "Courier New", ui-monospace, Menlo, Consolas, monospace; -webkit-user-select: none; user-select: none; }
+  #view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab;
+    image-rendering: pixelated; image-rendering: crisp-edges; }
+  .bar { position: fixed; left: 0; right: 0; display: flex; gap: 6px; padding: 8px; flex-wrap: wrap; align-items: center; pointer-events: none; z-index: 2; }
+  #top { top: 0; } #bottom { bottom: 0; justify-content: space-between; align-items: flex-end; }
+  .grp { display: flex; gap: 0; pointer-events: auto; box-shadow: 0 3px 0 #0b090e; }
+  button { font: inherit; font-weight: 700; font-size: 13px; letter-spacing: .5px; color: #e9dcb8; background: #3b2f3f; border: 2px solid #1b1520;
+    border-left-width: 0; padding: 8px 11px; cursor: pointer; text-transform: uppercase; box-shadow: inset 0 2px 0 #5a4a5c, inset 0 -3px 0 #2a2030; }
+  .grp button:first-child { border-left-width: 2px; }
+  button.on { background: #c9a04a; color: #2a1c10; box-shadow: inset 0 2px 0 #f0d480, inset 0 -3px 0 #96702a; }
+  button:active { transform: translateY(1px); }
+  #info { pointer-events: auto; background: #e9dcb8; color: #2a1c10; border: 2px solid #1b1520; box-shadow: inset 0 0 0 2px #c9b684, 0 3px 0 #0b090e;
+    padding: 8px 12px; font-size: 13px; line-height: 1.45; max-width: 340px; }
+  #info b { font-size: 14px; } #info i { color: #6a4a2a; font-style: normal; }
+  #hint { font-size: 12px; color: #cfc3a4; background: rgba(20,17,26,.72); padding: 6px 9px; border: 2px solid #1b1520; pointer-events: none; max-width: 300px; }
+  #busy { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; letter-spacing: 2px;
+    background: rgba(20,17,26,.55); z-index: 5; pointer-events: none; opacity: 0; transition: opacity .12s; }
+  #busy.on { opacity: 1; }
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div class="bar" id="top">
+  <div class="grp" id="scenes"></div>
+  <div class="grp" id="times"></div>
+  <div class="grp"><button id="zo">−</button><button id="zi">+</button></div>
+</div>
+<div class="bar" id="bottom">
+  <div id="info"><b>King Simulator</b> — art test<br><i>Tap the ground to walk the king. Tap a villager to see who they are. Drag to look around.</i></div>
+  <div id="hint"></div>
+</div>
+<div id="busy">PAINTING…</div>
+<script src="js/engine.js"></script>
+<script src="js/tex.js"></script>
+<script src="js/build.js"></script>
+<script src="js/scenes.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
