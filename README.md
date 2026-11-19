@@ -25,3 +25,10 @@ who they are and what they are doing, drag to pan, pinch or use +/− to zoom.
 
 The static scene is baked once (~0.5 s); each frame only copies it and draws the moving things with a
 per-pixel depth test, so it costs about 1 ms per frame.
+
+## High-detail test (`hd/`)
+
+`hd/index.html` is a second pass at double the pixel density, aimed at the reference image: soft
+dithered shadow edges, ambient occlusion, edge highlights, richer wall / roof / cobble textures,
+3D flower boxes, ivy, lanterns, shop signs, baskets of produce and ~30px-tall villagers.
+It bakes in about 1.3 s and uses a leaner G-buffer (world position is reconstructed from depth).
