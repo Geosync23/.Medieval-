@@ -26,11 +26,14 @@
   function load(key, keepCam) {
     scene = Scenes[key]; sceneKey = key; ready = false;
     const b = scene.bounds;
-    const W = Math.ceil((b[2] - b[0] + b[3] - b[1]) * E.HW), H = Math.ceil((b[2] - b[0] + b[3] - b[1]) * E.HH + b[4] * E.ZS) + 8;
-    E.init(W, H, Math.round(-(b[0] - b[3]) * E.HW), Math.round(-(b[0] + b[1]) * E.HH + b[4] * E.ZS) + 4);
+    const v = scene.view;
+    if (v) E.init(Math.ceil((v.d1 - v.d0) * E.HW), Math.ceil((v.s1 - v.s0) * E.HH + v.z * E.ZS) + 8, Math.round(-v.d0 * E.HW), Math.round(-v.s0 * E.HH + v.z * E.ZS) + 4);
+    else { const W = Math.ceil((b[2] - b[0] + b[3] - b[1]) * E.HW), H = Math.ceil((b[2] - b[0] + b[3] - b[1]) * E.HH + b[4] * E.ZS) + 8;
+      E.init(W, H, Math.round(-(b[0] - b[3]) * E.HW), Math.round(-(b[0] + b[1]) * E.HH + b[4] * E.ZS) + 4); }
+    follow = !!scene.follow;
     B.reset(); scene.build();
     applyTime(scene); E.bake(b);
-    off.width = W; off.height = H; img = octx.createImageData(W, H); frame = new Uint32Array(img.data.buffer);
+    off.width = E.W; off.height = E.H; img = octx.createImageData(E.W, E.H); frame = new Uint32Array(img.data.buffer);
     Sim.selected = null; Sim.setup(scene); Sim.afterBake();
     if (!keepCam) { camX = E.sx(scene.focus[0], scene.focus[1]); camY = E.sy(scene.focus[0], scene.focus[1], scene.focusZ || 1.5); }
     ready = true;
@@ -83,7 +86,7 @@
       const p = Sim.personAt(lx, ly);
       if (p) { Sim.selected = p; showInfo(p); return; }
       const hit = E.pick(lx, ly);
-      if (hit && hit.nz > 0.9 && hit.z < 0.6 && Sim.kingTo(hit.x, hit.y)) { Sim.selected = Sim.king(); showInfo(Sim.king()); marker = [hit.x, hit.y, 1]; }
+      if (hit && hit.nz > 0.9 && hit.z < 0.6 && Sim.kingTo(hit.x, hit.y)) { Sim.selected = Sim.king(); showInfo(Sim.king()); marker = [hit.x, hit.y, 1]; follow = !!scene.follow; }
     }
   };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
@@ -101,6 +104,7 @@
     E.begin(frame);
     if (marker) { marker[2] -= dt; if (marker[2] <= 0) marker = null; else { const mx = Math.round(E.sx(marker[0], marker[1])), my = Math.round(E.sy(marker[0], marker[1], 0)), r = 10 - Math.floor(marker[2] * 8); for (let a = 0; a < 32; a++) E.px(mx + Math.round(Math.cos(a * 0.19635) * r * 1.6), my + Math.round(Math.sin(a * 0.19635) * r * 0.8), marker[0] + marker[1] + 0.02, 0xffe27a); } }
     Sim.draw(time);
+    if (follow && Sim.king()) { const k = Sim.king(), e = Math.min(1, dt * 2.5); camX += (E.sx(k.x, k.y) - camX) * e; camY += (E.sy(k.x, k.y, 1) - camY) * e; }
     if (Sim.selected) showInfo(Sim.selected);
     const vw = cv.width / zoom, vh = cv.height / zoom;
     camX = Math.max(Math.min(vw / 2, E.W / 2), Math.min(Math.max(E.W - vw / 2, E.W / 2), camX));
@@ -116,6 +120,6 @@
   const h = (location.hash || '').slice(1); if (Scenes[h]) sceneKey = h;
   ui();
   // test hooks (used by the screenshot script)
-  window.__ks = { load: k => { load(k); ui(); hint(); }, time: k => { tod = k; rebake(); ui(); }, cam: (x, y, z) => { camX = E.sx(x, y); camY = E.sy(x, y, 0); if (z) zoom = zoomT = z; }, step: s => { for (let i = 0; i < s * 30; i++) Sim.update(1 / 30); time += s; } };
+  window.__ks = { zoomFit: (d, z) => { follow = false; zoom = zoomT = z; camX = (d + 50) * E.HW; camY = E.H / 2; }, load: k => { load(k); ui(); hint(); }, time: k => { tod = k; rebake(); ui(); }, cam: (x, y, z) => { camX = E.sx(x, y); camY = E.sy(x, y, 0); if (z) zoom = zoomT = z; }, step: s => { for (let i = 0; i < s * 30; i++) Sim.update(1 / 30); time += s; } };
   busy(() => { const t0 = performance.now(); load(sceneKey); hint(); console.log('bake ms', Math.round(performance.now() - t0)); requestAnimationFrame(tick); });
 })();

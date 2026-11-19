@@ -34,6 +34,7 @@ const Sim = {};
       const x0 = Math.floor((r[0] - pad - GX) * RES), x1 = Math.ceil((r[0] + r[2] + pad - GX) * RES), y0 = Math.floor((r[1] - pad - GY) * RES), y1 = Math.ceil((r[1] + r[3] + pad - GY) * RES);
       for (let y = Math.max(0, y0); y < Math.min(GH, y1); y++) for (let x = Math.max(0, x0); x < Math.min(GW, x1); x++) grid[y * GW + x] = 1;
     }
+    if (sc.blockFn) for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) if (sc.blockFn((x + 0.5) / RES + GX, (y + 0.5) / RES + GY)) grid[y * GW + x] = 1;
   }
   const cell = (x, y) => { const cx = Math.floor((x - GX) * RES), cy = Math.floor((y - GY) * RES); return (cx < 0 || cy < 0 || cx >= GW || cy >= GH) ? -1 : cy * GW + cx; };
   Sim.walkable = (x, y) => { const c = cell(x, y); return c >= 0 && !grid[c]; };

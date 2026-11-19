@@ -109,10 +109,10 @@ const E = {};
   function setupShadow(bounds) {
     const L = E.light.L; smL = L; smA = norm(cross(L, [0, 0, 1])); smB = cross(L, smA);
     let a0 = 1e9, a1 = -1e9, b0 = 1e9, b1 = -1e9;
-    for (const x of [bounds[0], bounds[2]]) for (const y of [bounds[1], bounds[3]]) for (const z of [0, bounds[4]]) {
-      const p = [x, y, z], a = dot(p, smA), b = dot(p, smB); a0 = Math.min(a0, a); a1 = Math.max(a1, a); b0 = Math.min(b0, b); b1 = Math.max(b1, b);
-    }
-    SMS = 36;
+    const pts = bounds.pts || [];
+    if (!bounds.pts) for (const x of [bounds[0], bounds[2]]) for (const y of [bounds[1], bounds[3]]) for (const z of [0, bounds[4]]) pts.push([x, y, z]);
+    for (const p of pts) { const a = dot(p, smA), b = dot(p, smB); a0 = Math.min(a0, a); a1 = Math.max(a1, a); b0 = Math.min(b0, b); b1 = Math.max(b1, b); }
+    SMS = bounds.sms || 36;
     const w = Math.ceil((a1 - a0) * SMS) + 4, h = Math.ceil((b1 - b0) * SMS) + 4;
     SMW = w; smOX = -a0 * SMS + 2; smOY = -b0 * SMS + 2;
     if (!SM || SM.length !== w * h) SM = new Float32Array(w * h); SM.fill(-1e9); SM.h = h;

@@ -4,7 +4,7 @@
 (function () {
   const h2 = E.h2, Q = E.quad, mul = T.mul, mix = T.mix, U = 32, V = 40;
   const NOAO = E.F_NOAO << 24, FWA = E.F_WATER << 24, FE = E.F_EMIS << 24;
-  const _reset = B.reset; B.reset = function () { _reset(); B.falls = []; B.flies = []; };
+  const _reset = B.reset; B.reset = function () { _reset(); B.falls = []; B.flies = []; B.gulls = []; };
 
   /* ---------- textures ---------- */
   const FLOOR = T.pal(['#2f5a30', '#386a34', '#44783a', '#4f8a3e', '#5c9a44']);
@@ -175,6 +175,123 @@
     },
   };
 
+  /* =====================================================================
+   *  Clifftop path: a long, solitary coastal trail.  The world is a diagonal band
+   *  so it reads as a wide panorama; d = x - y runs along it, s = x + y across it.
+   * ===================================================================== */
+  const D0 = -50, D1 = 50, S0 = 50, S1 = 82, SEA = -2.4, DB = -18;
+  const Cc = d => 66 + 1.6 * Math.sin(d * 0.21 + 2) + Math.sin(d * 0.5) + 0.5 * Math.sin(d * 1.1) + 2.6 * Math.exp(-(((d - 43) / 4.5) ** 2));
+  const Ctr = d => Cc(d) - 4.4 - 1.5 * Math.sin(d * 0.11 + 0.5) - 0.8 * Math.sin(d * 0.31);
+  const Hs = d => Math.min(56 + 1.8 * Math.sin(d * 0.15 + 1) + 1.2 * Math.sin(d * 0.41), Ctr(d) - 2.4);
+  const W2 = (d, s) => [(s + d) / 2, (s - d) / 2];
+  const MOOR = T.pal(['#5a7a3a', '#688a40', '#76964a', '#8aa052', '#9aa85a']), DRY = T.pal(['#a89a58', '#b8a860', '#9a8a4c']), HEATH = T.pal(['#9a6ab8', '#b88ad0', '#7a4a9a', '#c9a0dc']), GORSE = T.pal(['#e8c83a', '#f4dc5a', '#d9b02a']);
+  function moor(x, y) {
+    const tx = Math.floor(x * U), ty = Math.floor(y * U), n = T.fbm(x * 0.35, y * 0.35), r = h2(tx, ty >> 1);
+    let i = Math.min(4, Math.max(0, (n * 4.8 + (h2(tx >> 1, ty >> 2) - 0.5) * 1.6) | 0));
+    const dry = T.fbm(x * 0.8 + 9, y * 0.8); if (dry > 0.6 && h2(tx >> 1, ty >> 1) < (dry - 0.58) * 2.6) return DRY[(r * 3) | 0];
+    const he = T.fbm(x * 0.6 + 40, y * 0.6); if (he > 0.58 && h2(tx >> 1, (ty >> 1) + 5) < (he - 0.58) * 1.8) return HEATH[(r * 4) | 0];
+    if (h2(tx >> 1, (ty >> 1) + 77) < 0.004) return (tx & 1) === (ty & 1) ? 0xf4ecd6 : 0xeccb4c;
+    if (r < 0.08) i = Math.min(4, i + 1); else if (r > 0.94) i = Math.max(0, i - 1);
+    return MOOR[i];
+  }
+  function coastGround(x, y) {
+    const s = x + y, d = x - y, tx = Math.floor(x * U), ty = Math.floor(y * U), n = T.fbm(x * 0.6, y * 0.6);
+    if (Math.abs(d - DB) < 0.62 && s > Hs(DB) - 0.5) { if (Math.abs(d - DB) < 0.4 + (n - 0.5) * 0.2) return (T.fbm(x * 2, y * 2) > 0.5 ? 0x4aa0a0 : 0x3a8a92) | FWA; return h2(tx >> 1, ty >> 1) < 0.35 ? 0x9a9488 : mul(0x6e5e46, 0.85 + h2(tx, ty) * 0.25); }
+    const dt = Math.abs(s - Ctr(d)), w = 1.0 + n * 0.4;
+    if (d < 41.5 && dt < w) { const c = T.dirt(x, y); if (Math.abs(dt - 0.42) < 0.08) return mul(c, 0.84); if (dt > w - 0.26 && h2(tx >> 1, ty >> 1) < 0.5) return moor(x, y); return c; }
+    const dc = Cc(d) - s; if (dc < 0.75 + n * 0.7) return h2(tx >> 1, ty >> 1) < (dc - 0.2) * 0.9 ? moor(x, y) : mul(ROCK[(h2(tx >> 2, ty >> 2) * ROCK.length) | 0], 0.9 + h2(tx, ty) * 0.16);
+    return moor(x, y);
+  }
+  function seaTex(x, y) {
+    const s = x + y, d = x - y, tx = Math.floor(x * U), ty = Math.floor(y * U), dc = s - Cc(d), fl = h2(tx >> 1, ty >> 1) < 0.1 ? FWA : 0;
+    if (dc < -1.5) return -1;
+    if (dc < 0.9 + T.vn(d * 0.8, 2) * 0.7) return (h2(tx >> 1, ty >> 1) < 0.55 ? 0xe4f2f2 : 0x8fc8cc) | fl;
+    const wv = Math.sin(dc * 2.2 + T.vn(d * 0.25, 1) * 6 + T.vn(x * 0.9, y * 0.9) * 1.5); if (wv > 0.94) return 0x74b8c0 | fl;
+    const n = T.fbm(x * 0.5, y * 0.5), b = dc < 2.5 ? 0x3a8e98 : dc < 5.5 ? 0x307c8c : 0x2a6c82;
+    return mul(b, 0.9 + n * 0.22 + (wv < -0.9 ? -0.06 : 0)) | fl;
+  }
+  let hillY = [], hillY2 = [], hillH = [];
+  const landZ = (x, y) => { const i = Math.floor(x); if (hillH[i] === undefined) return 0; return y < hillY2[i] ? hillH[i] + 1.3 : y < hillY[i] ? hillH[i] : 0; };
+  function windTree(x, y, z, s) {
+    const sd = sdc++ * 7, tex = T.leaves(PINE, null, 0), bk = bark(0x4f3a2c);
+    for (let i = 0; i < 5; i++) B.cyl(x + i * 0.05 * s, y - i * 0.05 * s, z + i * 0.4 * s, (0.16 - i * 0.018) * s, 0.44 * s, 6, bk, {});
+    for (let i = 0; i < 14; i++) { const k = 0.15 + i * 0.075 + h2(sd, i) * 0.15; E.blob([x + k * s + (h2(sd + 1, i) - 0.5) * 0.7 * s, y - k * s + (h2(sd + 2, i) - 0.5) * 0.7 * s, z + (1.9 + h2(sd + 3, i) * 0.8) * s], (0.5 - i * 0.014) * s, tex, { seed: sd + i }); }
+    if (!z) B.blockC(x, y, 0.3);
+  }
+  function cairn(x, y) { E.blob([x, y, 0.1], 0.2, boulderTex(sdc), { f: E.F_NOAO }); E.blob([x + 0.02, y, 0.32], 0.15, boulderTex(sdc + 1), { f: E.F_NOAO }); E.blob([x, y + 0.02, 0.5], 0.11, boulderTex(sdc + 2), { f: E.F_NOAO }); E.blob([x, y, 0.64], 0.07, () => 0xa39c8c, { f: E.F_NOAO }); sdc += 3; B.blockC(x, y, 0.22); }
+
+  const cPts = []; for (const d of [D0, D1]) for (const s of [S0, S1]) for (const z of [SEA, 8]) cPts.push([(s + d) / 2, (s - d) / 2, z]);
+  Scenes.coast = {
+    name: 'Clifftop Path', view: { d0: D0, d1: D1, s0: S0, s1: S1, z: 8.5 }, bounds: Object.assign([0, 0, 64, 64, 8], { pts: cPts, sms: 26 }),
+    focus: W2(-44, Ctr(-44)), focusZ: 1, king: W2(-45, Ctr(-45)), npcs: 0, walk: [0, 0, 64, 64], follow: true,
+    blockFn: (x, y) => { const s = x + y, d = x - y; return s > Cc(d) - 0.6 || landZ(x, y) > 0 || s < S0 + 0.6 || d < D0 + 0.8 || d > D1 - 0.8 || (Math.abs(d - DB) < 0.55 && Math.abs(s - Ctr(DB)) > 1.1 && s > Hs(DB) - 0.5); },
+    blurb: 'A long, solitary clifftop walk: just the king, the wind and the sea. Tap far along the path and the camera follows. The lighthouse is at the far end.',
+    build() {
+      hillY = []; hillY2 = []; hillH = [];
+      Q([0, 0, SEA], [66, 0, 0], [0, 66, 0], seaTex, { n: [0, 0, 1], noShadow: true });
+      // land: half-unit columns ending at a jagged cliff edge
+      const colY = [];
+      for (let i = 0; i < 128; i++) {
+        const x = i * 0.5, xc = x + 0.25; let yc = 66 - xc; for (let k = 0; k < 5; k++) yc = Cc(xc - yc) - xc;
+        yc = Math.round(yc * 4) / 4; colY[i] = yc; const yT = S0 - 6 - xc; if (yc <= yT) continue;
+        B.box(x, yT, SEA, 0.5, yc - yT, -SEA, { side: rockTex, ty: (s, t, q) => rockTex(s + x, t, q), tx: (s, t, q) => rockTex(s + yc, t, q), P: { seed: 0 }, top: (s, t) => coastGround(x + s, yT + t) });
+      }
+      // inland hills: two terraces of rock
+      for (let i = 0; i < 64; i++) {
+        const xc = i + 0.5; let yh = 56 - xc; for (let k = 0; k < 5; k++) yh = Hs(xc - yh) - xc;
+        yh = Math.round(yh + T.vn(i * 0.5, 4) * 1.2 - 0.6); const yT = S0 - 6 - xc, hh = 0.8 + Math.round(T.vn(i * 0.16, 8) * 4) * 0.45;
+        if (yh <= yT) continue; hillY[i] = yh; hillY2[i] = yh - 1.5 - Math.round(T.vn(i * 0.3, 12) * 2); hillH[i] = hh;
+        B.box(i, yT, 0, 1, yh - yT, hh, { side: rockTex, ty: (s, t, q) => rockTex(s + i, t, q), tx: (s, t, q) => rockTex(s + yh, t, q), P: { seed: 0 }, top: (s, t) => moor(i + s, yT + t) });
+        if (hillY2[i] > yT) B.box(i, yT, hh, 1, hillY2[i] - yT, 1.3, { side: rockTex, ty: (s, t, q) => rockTex(s + i + 50, t, q), tx: (s, t, q) => rockTex(s + yh + 50, t, q), P: { seed: 0 }, top: (s, t) => moor(i + s + 30, yT + t) });
+      }
+      const at = (d, off) => W2(d, Ctr(d) + off);
+      // brook, slab bridge and a thin fall off the cliff
+      { const [bx, by] = W2(DB, Ctr(DB)); B.box(bx - 0.85, by - 0.85, 0, 1.7, 1.7, 0.13, { side: T.flat(0x8a857a), top: (s, t) => T.mul(T.stoneAt(Math.floor(s * 32), Math.floor(t * 32), 3, 0xa8a294), 1.05) });
+        const [fx] = W2(DB, Cc(DB)), ci = Math.floor(fx / 0.5), fy = colY[ci] + 0.03, fallTex = (s, t) => { const r = h2(Math.floor(s * U), Math.floor(t * V) >> 3); return (r < 0.3 ? 0xd8f4f8 : r < 0.65 ? 0xa8e0ea : 0x7fc8d8) | NOAO; };
+        Q([ci * 0.5, fy, SEA], [0.5, 0, 0], [0, 0, -SEA], fallTex, { n: [0, 1, 0], noShadow: true }); B.falls.push({ x0: ci * 0.5, x1: ci * 0.5 + 0.5, y: fy + 0.02, z0: SEA, z1: 0 }); }
+      // start: signpost and an old gate
+      { const [x, y] = at(-46.5, 1.5); B.box(x - 0.05, y - 0.05, 0, 0.1, 0.1, 1.6, { side: T.wood, P: { c: 0x6a4a34 } }); B.box(x - 0.1, y - 0.03, 1.2, 0.75, 0.06, 0.22, { side: T.flat(0x9a7a50), noShadow: true }); B.blockC(x, y, 0.2);
+        for (const o of [-1.2, 1.2]) { const [gx, gy] = at(-47.5, o); B.box(gx - 0.09, gy - 0.09, 0, 0.18, 0.18, 1.1, { side: bark(0x5c4432), top: T.flat(0x7a6048) }); B.blockC(gx, gy, 0.2); } }
+      for (const d of [-40, -31, -22.5, -12, -3, 7, 17, 26, 35]) { const [x, y] = at(d, (d & 1) ? 1.5 : -1.5); cairn(x, y); }
+      { const [x, y] = at(-36, 2.0); windTree(x, y, 0, 1.25); } { const [x, y] = at(22, 2.2); windTree(x, y, 0, 1.1); } { const [x, y] = at(-4, -2.6); windTree(x, y, landZ(x, y), 1.0); }
+      // standing stones
+      { const [cx, cy] = at(-28, -3.4); for (let i = 0; i < 7; i++) { const a = i / 7 * 6.283, x = cx + Math.cos(a) * 1.5, y = cy + Math.sin(a) * 1.5, z = landZ(x, y), hh = i === 3 ? 0.35 : 1.2 + h2(i, 3) * 0.7; B.box(x - 0.2, y - 0.14, z, i === 3 ? 1.1 : 0.4, 0.3, hh, { side: rockTex, P: { seed: i + 3 }, top: T.flat(0x7c776e) }); if (!z) B.block(x - 0.2, y - 0.14, 0.4, 0.3); } }
+      // viewpoint bench
+      { const [x, y] = at(-8, 1.9); B.bench(x, y, 'x'); }
+      // ruined watchtower
+      { const [x, y] = at(2, -3.3), st = { mat: 'stone', seed: 61, tint: 0x9a948a }; B.cyl(x, y, 0, 1.3, 2.4, 14, T.facade, { P: st, top: T.flat(0x4a4640), inner: 0.8 });
+        for (let i = 0; i < 9; i++) { const a = 1.2 + i * 0.5, hh = 0.4 + h2(i, 9) * 1.5; B.box(x + Math.cos(a) * 1.12 - 0.22, y + Math.sin(a) * 1.12 - 0.22, 2.4, 0.44, 0.44, hh, { side: T.facade, P: st }); }
+        B.ivy('y', x - 0.2, y + 1.28, 2.2, 71, 0.5); B.ivy('x', y + 0.1, x + 1.28, 1.6, 73, 0.4); B.blockC(x, y, 1.4); boulder(x + 1.9, y + 0.6, 0.3); boulder(x + 0.4, y + 1.9, 0.22); }
+      // abandoned shepherd's hut
+      { const [x, y] = at(12, -3.9); B.house({ x: x - 1.4, y: y - 1.2, w: 2.8, d: 2.4, floors: 0, h0: 1.6, base: 'stone', roof: T.ROOF_BROWN, rise: 1.25, axis: 'x', seed: 55, chimney: false, tint: 0x8f897e,
+          fy: [{ k: 'door', x: 0.36, w: 16, h: 40, trim: 0xa8a294, lamp: false }, { k: 'win', x: 0.78, y: 22, w: 12, h: 18, sill: 0xa8a294, frame: 0x4d3528, box: false, lit: false }] }); }
+      // lighthouse on the far headland, keeper's cottage
+      { const [x, y] = W2(44.5, Ctr(44.5) + 0.6);
+        const lh = (s, t, q) => { const X = Math.floor(s * U), Y = Math.floor(t * V), Ht = Math.round(q.vl * V), m = X % 46; if (m >= 20 && m < 25 && Y % 64 > 34 && Y % 64 < 48) return (m === 20 || Y % 64 === 47) ? 0x8a8478 : (0x263042 | (E.F_WIN << 24)); const red = Y > Ht * 0.36 && Y < Ht * 0.58; return mul(red ? 0xb8323a : 0xe8e4da, 0.93 + h2(X >> 2, Y >> 2) * 0.08 - (Y % 16 === 0 ? 0.06 : 0)); };
+        B.cyl(x, y, 0, 1.2, 0.5, 16, T.facade, { P: { mat: 'stone', seed: 33, tint: 0x9a948a }, top: T.flat(0x8a857a) }); B.cyl(x, y, 0.5, 1.0, 4.9, 16, lh, {});
+        B.cyl(x, y, 5.4, 1.3, 0.14, 16, T.flat(0x3a3a44), { top: T.flat(0x55555e) });
+        B.cyl(x, y, 5.54, 0.7, 0.8, 10, (s, t) => (Math.floor(s * U) % 9 === 0 ? 0x30303a : (0xffe9a0 | FE)), {}); B.cone(x, y, 6.34, 0.92, 0.85, 10, T.roof, { P: { pal: T.ROOF_RED, seed: 2 } });
+        E.blob([x, y, 7.3], 0.1, () => 0xd9b04a); E.addLight(x + 0.6, y + 0.6, 5.6, 11, [1.0, 0.86, 0.5], 1.5); E.addLight(x + 1.2, y + 1.2, 1.2, 4, null, 0.9); B.blockC(x, y, 1.3);
+        B.house({ x: x - 4.6, y: y - 0.2, w: 3.0, d: 2.6, floors: 0, h0: 1.7, base: 'stone', roof: T.ROOF_SLATE, rise: 1.3, axis: 'x', seed: 57, tint: 0xc8c2b4,
+          fy: [{ k: 'door', x: 0.34, w: 16, h: 40, trim: 0xa8a294 }, { k: 'win', x: 0.76, y: 22, w: 12, h: 18, sill: 0xa8a294, frame: 0x4d3528 }], fx: [{ k: 'win', x: 0.5, y: 22, w: 12, h: 18, sill: 0xa8a294, frame: 0x4d3528 }] }); }
+      // sea stacks and rocks in the surf
+      for (const p of [[-9, 3.4, 3.0], [19, 2.8, 2.2], [27, 4.4, 3.6], [-33, 3.0, 1.6], [36, 3.2, 1.2]]) { const [x, y] = W2(p[0], Cc(p[0]) + p[1]); B.box(x - 0.6, y - 0.5, SEA, 1.2, 1.0, p[2], { side: rockTex, P: { seed: p[0] | 0 }, top: (s, t) => moor(s + x, t + y) }); B.box(x + 0.5, y - 0.1, SEA, 0.7, 0.7, p[2] * 0.5, { side: rockTex, P: { seed: 9 }, top: T.flat(0x7c776e) }); if (p[2] > 2) B.bush(x, y, { z: SEA + p[2], s: 0.8, pal: FERN, flowers: null, noBlock: true }); }
+      for (let i = 0; i < 44; i++) { const d = D0 + 2 + h2(i, 501) * 96, [x, y] = W2(d, Cc(d) + 0.5 + h2(i, 502) * 2.2); E.blob([x, y, SEA + 0.05], 0.14 + h2(i, 503) * 0.22, (dx, dy, ix, iy) => ROCK[(h2((ix + i) >> 2, (iy + (ix >> 1)) >> 2) * ROCK.length) | 0], { f: E.F_NOAO }); }
+      // heather, gorse, ferns, boulders
+      const heath = T.leaves(T.LEAF_D, HEATH, 0.34);
+      for (let i = 0; i < 330; i++) {
+        const d = D0 + 1 + h2(i, 601) * 98, s = S0 + 1 + h2(i, 602) * (Cc(d) - S0 - 2), [x, y] = W2(d, s), r = h2(i, 603), z = landZ(x, y);
+        if (Math.abs(s - Ctr(d)) < 1.5 || Math.abs(d - DB) < 0.9 || d > 39) continue;
+        if (r < 0.46) B.bush(x, y, { z, s: 0.6 + h2(i, 604) * 0.5, n: 3, pal: T.LEAF_D, flowers: HEATH, fp: 0.34, noBlock: true });
+        else if (r < 0.62) B.bush(x, y, { z, s: 0.7 + h2(i, 604) * 0.5, n: 3, pal: FERN, flowers: GORSE, fp: 0.3, noBlock: true });
+        else if (r < 0.74) B.bush(x, y, { z, s: 0.55 + h2(i, 604) * 0.4, n: 3, pal: FERN, flowers: null, noBlock: true });
+        else if (r < 0.9 && !z) boulder(x, y, 0.14 + h2(i, 604) * 0.3);
+        else if (r > 0.965 && z) windTree(x, y, z, 0.8 + h2(i, 604) * 0.3);
+      }
+      for (let i = 0; i < 9; i++) B.gulls.push([D0 + 8 + i * 10.5, 3.5 + h2(i, 701) * 4, 2.2 + h2(i, 702) * 2.6, i * 1.7, 1.6 + h2(i, 703) * 1.6]);
+    },
+  };
+
   /* ---------- extra effects: fire, waterfall, fireflies / butterflies ---------- */
   Sim.fx = [function (t) {
     for (let k = 0; k < B.flames.length; k++) {
@@ -200,6 +317,12 @@
       const sx = Math.round(E.sx(x, y)), sy = Math.round(E.sy(x, y, z)), d = x + y + z + 0.2;
       if (night) { const b = Math.sin(t * 2.2 + s * 1.9); if (b < -0.2) continue; E.px(sx, sy, d, 0xf0ffa0); E.px(sx + 1, sy, d, 0xf0ffa0); E.px(sx, sy + 1, d, 0xd8f070); E.px(sx + 1, sy + 1, d, 0xd8f070); if (b > 0.4) { E.px(sx - 1, sy, d, 0x8aa84a); E.px(sx + 2, sy + 1, d, 0x8aa84a); E.px(sx, sy - 1, d, 0x8aa84a); E.px(sx + 1, sy + 2, d, 0x8aa84a); } }
       else if (s % 3 === 0) { const c = [0xf8f4e8, 0xf4d85a, 0x8ac8f4, 0xf09ab8][s % 4], up = Math.floor(t * 9 + s) & 1; E.px(sx, sy, d, 0x3a3038); E.px(sx - 1, sy - (up ? 1 : 0), d, c); E.px(sx + 1, sy - (up ? 1 : 0), d, c); if (up) { E.px(sx - 2, sy - 2, d, c); E.px(sx + 2, sy - 2, d, c); } else { E.px(sx - 2, sy, d, c); E.px(sx + 2, sy, d, c); } }
+    }
+    for (const g of B.gulls) {      // gulls wheeling over the water
+      const a = t * 0.3 + g[3], d = g[0] + Math.cos(a) * g[4] * 2.2, ss = Cc(d) + g[1] + Math.sin(a) * g[4], x = (ss + d) / 2, y = (ss - d) / 2, z = g[2] + Math.sin(t * 0.5 + g[3]) * 0.4;
+      const sx = Math.round(E.sx(x, y)), sy = Math.round(E.sy(x, y, z)), dd = x + y + z + 3, fl = Math.sin(t * 5 + g[3] * 3), c = night ? 0x8a94b0 : 0xf4f4f0, c2 = night ? 0x5a6480 : 0x9aa0a8;
+      E.px(sx, sy, dd, c); E.px(sx + 1, sy, dd, c2);
+      for (let k = 1; k <= 5; k++) { const oy = Math.round(-fl * k * 0.55 + (k > 3 ? (k - 3) * 0.6 : 0)); E.px(sx - k, sy + oy, dd, k > 3 ? c2 : c); E.px(sx + 1 + k, sy + oy, dd, k > 3 ? c2 : c); }
     }
   }];
 })();
