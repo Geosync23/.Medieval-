@@ -220,7 +220,7 @@ const Sim = {};
     for (const w of waterInfo) {
       const x = w[1], y = w[2];
       const v = Math.sin(x * 9 + t * 2.1) + Math.sin(y * 11 - t * 1.7) + Math.sin((x - y) * 6 + t * 2.9);
-      if (v > 1.55) { const p = w[3]; fr[w[0]] = 0xff000000 | (Math.min(255, (p >> 16 & 255) + 70) << 16) | (Math.min(255, (p >> 8 & 255) + 70) << 8) | Math.min(255, (p & 255) + 80); }
+      if (v > 1.55) { const p = w[3]; fr[w[0]] = 0xff000000 | (Math.min(255, (p >> 16 & 255) * 1.4 + 14) << 16) | (Math.min(255, (p >> 8 & 255) * 1.4 + 14) << 8) | Math.min(255, (p & 255) * 1.4 + 14); }
       else if (v < -1.7) { const p = w[3]; fr[w[0]] = 0xff000000 | (((p >> 16 & 255) * 0.85) << 16) | (((p >> 8 & 255) * 0.85) << 8) | ((p & 255) * 0.85); }
     }
   }

@@ -88,9 +88,10 @@ const T = {};
     if (ly === 0 || (tx + off) % 24 === 0) return mul(base, 0.6);
     return mul(base, 0.88 + h2(p, seg) * 0.22 + (h2(tx >> 2, ty) < 0.12 ? -0.07 : 0));
   };
-  T.water = function (x, y) {
+  T.water = function (x, y, deep) {
     const tx = Math.floor(x * 16), ty = Math.floor(y * 16);
     const n = fbm(x * 1.3, y * 1.3);
+    if (deep) return (n > 0.62 ? 0x3a8a8c : n > 0.4 ? 0x2f7a82 : 0x286a78) | FWA;
     return (n > 0.62 ? 0x4fb0a8 : n > 0.4 ? 0x3d9c9a : 0x2f8590) | FWA;
   };
 
@@ -313,7 +314,7 @@ const T = {};
       const X = Math.floor(s * 16), Y = Math.floor(t * 16), Wt = Math.round(q.ul * 16), Ht = Math.round(q.vl * 16);
       const ex = Math.min(X, Wt - 1 - X), ey = Math.min(Y, Ht - 1 - Y), e = Math.min(ex, ey);
       if (e < 1) return c3; if (e < 3) return c2; if (e === 3) return c3;
-      if (((X + Y) % 16 === 0 || (X - Y + 1600) % 16 === 0)) return mul(c2, 0.9);
+      if (((X + Y) % 16 === 0 || (X - Y + 1600) % 16 === 0)) return mul(c1, 0.8);
       return mul(c1, 0.94 + h2(X, Y) * 0.1);
     };
   };
