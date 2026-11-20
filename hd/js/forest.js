@@ -4,7 +4,7 @@
 (function () {
   const h2 = E.h2, Q = E.quad, mul = T.mul, mix = T.mix, U = 32, V = 40;
   const NOAO = E.F_NOAO << 24, FWA = E.F_WATER << 24, FE = E.F_EMIS << 24;
-  const _reset = B.reset; B.reset = function () { _reset(); B.falls = []; B.flies = []; B.gulls = []; };
+  const _reset = B.reset; B.reset = function () { _reset(); B.falls = []; B.flies = []; B.gulls = []; B.deer = []; };
 
   /* ---------- textures ---------- */
   const FLOOR = T.pal(['#2f5a30', '#386a34', '#44783a', '#4f8a3e', '#5c9a44']);
@@ -292,6 +292,132 @@
     },
   };
 
+  /* =====================================================================
+   *  Deepwood: a long trail through old, dense forest (same band-shaped world).
+   *  Trees behind the trail are packed tight; on the near side only tall-trunked
+   *  giants are allowed, so the path is seen through a colonnade of trunks.
+   * ===================================================================== */
+  const GD0 = -50, GD1 = 50, GS0 = 47, GS1 = 70, GBR = -24;
+  const Gt = d => 61 + 2.2 * Math.sin(d * 0.13) + 1.2 * Math.sin(d * 0.31 + 1) + 0.6 * Math.sin(d * 0.7);
+  const gW = (d, off) => W2(d, Gt(d) + off);
+  const GPOND = gW(-2, -5.0), GPOOL = (() => { const p = gW(34, -4.4); return [p[0], p[1] + 1.0]; })();
+  const DEEP = T.pal(['#22462c', '#2a5530', '#336436', '#3d743a', '#48843f']);
+  function deepFloor(x, y) {
+    const tx = Math.floor(x * U), ty = Math.floor(y * U), n = T.fbm(x * 0.4, y * 0.4), r = h2(tx, ty >> 1);
+    let i = Math.min(4, Math.max(0, (n * 4.6 + (h2(tx >> 1, ty >> 2) - 0.5) * 1.7) | 0));
+    const lit = T.fbm(x * 0.9 + 20, y * 0.9);
+    if (lit > 0.5 && h2(tx >> 1, ty >> 1) < (lit - 0.5) * 2.2) return LITTER[(r * 4) | 0];
+    const ms = T.fbm(x * 1.7 + 60, y * 1.7); if (ms > 0.66) return h2(tx >> 1, ty >> 1) < 0.5 ? 0x5a8a3a : 0x6e9c44;
+    if (h2(tx >> 1, (ty >> 1) + 77) < 0.003) return (tx & 1) === (ty & 1) ? BLOOM[(h2(tx >> 3, ty >> 3) * 5) | 0] : 0xf4e27a;
+    if (r < 0.07) i = Math.min(4, i + 1); else if (r > 0.93) i = Math.max(0, i - 1);
+    return DEEP[i];
+  }
+  function deepGround(x, y) {
+    const s = x + y, d = x - y, tx = Math.floor(x * U), ty = Math.floor(y * U), n = T.fbm(x * 0.6, y * 0.6);
+    if (s < GS0 - 7.5) return -1;
+    const bd = Math.abs(d - GBR - Math.sin(s * 0.5) * 0.35);
+    if (bd < 0.66) { if (bd < 0.44 + (n - 0.5) * 0.2) return (T.fbm(x * 2, y * 2) > 0.5 ? 0x3f9494 : 0x2f7c86) | FWA; return h2(tx >> 1, ty >> 1) < 0.35 ? 0x8a8478 : mul(0x5e5040, 0.85 + h2(tx, ty) * 0.25); }
+    const pd = Math.min(Math.hypot(x - GPOND[0], y - GPOND[1]) - 1.75, Math.hypot(x - GPOOL[0], y - GPOOL[1]) - 1.25) + (n - 0.5) * 0.3;
+    if (pd < 0) { const w = T.fbm(x * 1.6, y * 1.6); return (pd > -0.2 ? 0x4a9a98 : w > 0.55 ? 0x2f7f86 : 0x286e7a) | FWA; }
+    if (pd < 0.3) return h2(tx >> 1, ty >> 1) < 0.3 ? 0x8a8478 : mul(0x5e5040, 0.85 + h2(tx, ty) * 0.25);
+    const dt = Math.abs(s - Gt(d)), w = 0.85 + n * 0.4;
+    if (dt < w) {
+      if (T.fbm(x * 1.3 + 7, y * 1.3) > 0.64 || (dt > w - 0.28 && h2(tx >> 1, ty >> 1) < 0.55)) return deepFloor(x, y);
+      const rt = (x * 1.3 + y * 0.45 + T.vn(x * 0.8, y * 0.8) * 1.6) % 3.3; if (Math.abs(rt - 1.6) < 0.045) return (tx + ty) & 1 ? 0x4a3626 : 0x5c4432;
+      const c = mul(T.dirt(x, y), 0.8); return Math.abs(dt - 0.36) < 0.07 ? mul(c, 0.85) : c;
+    }
+    return deepFloor(x, y);
+  }
+  function giant(x, y, s) {
+    const sd = sdc++ * 17, bk = bark(0x4a372b), tex = T.leaves(T.LEAF_D, null, 0), tex2 = T.leaves(PINE, null, 0), moss = T.leaves(FERN, null, 0);
+    for (let i = 0; i < 6; i++) { const a = i / 6 * 6.283 + h2(sd, i); B.cyl(x + Math.cos(a) * 0.5 * s, y + Math.sin(a) * 0.5 * s, 0, 0.24 * s, 0.22 + h2(sd + 1, i) * 0.25, 6, bk, {}); }
+    B.cyl(x, y, 0, 0.56 * s, 1.5 * s, 10, bk, {}); B.cyl(x, y, 1.5 * s, 0.47 * s, 1.5 * s, 10, bk, {}); B.cyl(x, y, 3.0 * s, 0.38 * s, 1.9 * s, 8, bk, {});
+    for (let i = 0; i < 7; i++) { const a = 0.8 + h2(sd + 2, i) * 2.2; E.blob([x + Math.cos(a) * 0.55 * s, y + Math.sin(a) * 0.55 * s, 0.2 + h2(sd + 3, i) * 1.5], 0.12 + h2(sd + 4, i) * 0.1, moss, { seed: sd + i }); }
+    const top = 5.9 * s;
+    E.blob([x, y, top], 1.55 * s, tex, { seed: sd });
+    for (let i = 0; i < 10; i++) { const a = i / 10 * 6.283 + h2(sd + 5, i) * 0.7, rr = (1.3 + h2(sd + 6, i) * 0.9) * s; E.blob([x + Math.cos(a) * rr, y + Math.sin(a) * rr, top - (0.9 - h2(sd + 7, i) * 1.3) * s], (0.85 + h2(sd + 8, i) * 0.4) * s, i % 3 ? tex : tex2, { seed: sd + i * 3 }); }
+    for (let i = 0; i < 9; i++) { const a = h2(sd + 9, i) * 6.283, rr = h2(sd + 10, i) * 1.6 * s; E.blob([x + Math.cos(a) * rr, y + Math.sin(a) * rr, top + (0.7 + h2(sd + 11, i) * 0.9) * s], (0.45 + h2(sd + 12, i) * 0.3) * s, tex, { seed: sd + i * 5 }); }
+    B.blockC(x, y, 0.62 * s);
+  }
+  function glowshroom(x, y, s) { s = s || 1; B.box(x - 0.025, y - 0.025, 0, 0.05, 0.05, 0.12 * s, { side: T.flat(0xc8e8e0), noShadow: true }); E.blob([x, y, 0.15 * s], 0.08 * s, (dx, dy) => (dy < -0.2 ? 0xb8fff0 : 0x5ad8c8) | FE); }
+  const fallTexG = (s, t) => { const r = h2(Math.floor(s * U), Math.floor(t * V) >> 3); return (r < 0.3 ? 0xd8f4f8 : r < 0.65 ? 0xa8e0ea : 0x7fc8d8) | NOAO; };
+  const gPts = []; for (const d of [GD0, GD1]) for (const s of [GS0, GS1]) for (const z of [0, 9.5]) gPts.push([(s + d) / 2, (s - d) / 2, z]);
+
+  Scenes.deep = {
+    name: 'Deepwood Trail', view: { d0: GD0, d1: GD1, s0: GS0, s1: GS1, z: 9.5 }, bounds: Object.assign([0, 0, 62, 62, 9.5], { pts: gPts, sms: 26 }),
+    focus: gW(-45, 0), focusZ: 1.5, king: gW(-46, 0), npcs: 0, walk: [0, 0, 62, 62], follow: true,
+    times: { day: { amb: [0.37, 0.45, 0.5], sun: [1.02, 0.9, 0.55] }, dusk: { amb: [0.34, 0.33, 0.5] }, night: { amb: [0.17, 0.22, 0.38], sun: [0.2, 0.28, 0.5] } },
+    blockFn: (x, y) => { const s = x + y, d = x - y; return s < GS0 + 0.6 || s > GS1 - 0.4 || d < GD0 + 0.8 || d > GD1 - 0.8 || (Math.abs(d - GBR) < 0.75 && Math.abs(s - Gt(GBR)) > 1.0) || Math.hypot(x - GPOND[0], y - GPOND[1]) < 1.9 || Math.hypot(x - GPOOL[0], y - GPOOL[1]) < 1.4; },
+    blurb: 'A long walk through old, deep forest. The path is seen between giant trunks; the canopy shade is real. Tap far along the trail and the camera follows. Try Night for the glowing mushrooms.',
+    build() {
+      Q([0, 0, 0], [62, 0, 0], [0, 62, 0], deepGround, { n: [0, 0, 1] });
+      const ledge = (x, y, w, dd, hh, sd, o) => B.box(x, y, 0, w, dd, hh, Object.assign({ side: rockTex, P: { seed: sd }, top: (s, t) => deepFloor(s + x, t + y) }, o || {}));
+      // features to keep visible: [d, offset from trail, half-width in d]
+      const KO = [[-34, -2.8, 3.2], [GBR, -14, 1.3], [-12, -4.4, 3.6], [-2, -5.0, 4.4], [10, -3.4, 3.2], [22, -3.8, 3.8], [34, -4.4, 4.2], [45, -3.8, 5.5]];
+      const clear = (d, s) => KO.some(k => Math.abs(d - k[0]) < k[2] && s > Gt(k[0]) + k[1] - 2.0);
+
+      /* start: way-stone */
+      { const [x, y] = gW(-47.5, 1.4); B.box(x - 0.2, y - 0.15, 0, 0.4, 0.3, 1.0, { side: rockTex, P: { seed: 2 }, top: T.flat(0x6a8a44) }); B.blockC(x, y, 0.3); }
+      /* fallen giant beside the path */
+      { const [x, y] = gW(-34, -2.8); B.box(x - 1.8, y - 0.35, 0, 3.6, 0.7, 0.66, { side: bark(0x4a372b), top: (s, t) => (T.fbm(s * 3, t * 3) > 0.5 ? (h2(Math.floor(s * U), Math.floor(t * U)) < 0.5 ? 0x5a8a3a : 0x6e9c44) : bark(0x56402f)(s, t)), tx: (s, t, q, a, b) => { const c = rings(s, t, q, a, b); return c < 0 ? 0x4a372b : c; } });
+        B.block(x - 1.8, y - 0.35, 3.6, 0.7); for (let i = 0; i < 6; i++) mushroom(x - 1.5 + i * 0.55, y + 0.45 + h2(i, 3) * 0.2, 0.8 + h2(i, 4) * 0.6); fern(x - 2.2, y + 0.2, 0.9); fern(x + 2.1, y - 0.1, 0.8); stump(x + 2.9, y - 0.8); }
+      /* brook + plank bridge */
+      { const [x, y] = gW(GBR, 0); B.box(x - 0.95, y - 0.95, 0, 1.9, 1.9, 0.14, { side: T.wood, P: { c: 0x5a4030 }, top: (s, t) => T.planks(s, t, 0x7a5c40) });
+        for (let i = 0; i < 12; i++) { const ss = GS0 + 2 + i * 1.8, [bx, by] = W2(GBR + Math.sin(ss * 0.5) * 0.35 + (h2(i, 5) - 0.5) * 0.7, ss); if (Math.abs(ss - Gt(GBR)) > 1.6) E.blob([bx, by, 0.02], 0.12 + h2(i, 6) * 0.12, boulderTex(i), { f: E.F_NOAO }); }
+        for (let i = 0; i < 14; i++) { const ss = GS0 + 1 + h2(i, 7) * 21, [bx, by] = W2(GBR + (i & 1 ? 1.05 : -1.05), ss); if (Math.abs(ss - Gt(GBR)) > 1.5) fern(bx, by, 0.5 + h2(i, 8) * 0.4); } }
+      /* mossy outcrop with a cave mouth */
+      { const [x, y] = gW(-12, -4.4); const cave = (s, t, q) => { const ex = (s - q.ul * 0.5) / 0.8, ey = (t - 0.1) / 1.25; if (ex * ex + ey * ey < 1) return t < 0.12 ? 0x2a2428 : ex * ex + ey * ey > 0.8 ? 0x241e24 : 0x141016; return rockTex(s, t, q); };
+        ledge(x - 2.2, y - 2.4, 4.4, 2.4, 2.4, 11, { ty: cave }); ledge(x - 1.5, y - 3.3, 3.0, 1.7, 3.7, 12); ledge(x + 2.0, y - 2.0, 1.4, 1.6, 1.2, 13); B.block(x - 2.2, y - 3.3, 5.6, 3.3);
+        pine(x - 1.2, y - 1.6, 2.4, 0.75); pine(x + 0.3, y - 2.6, 3.7, 0.8); B.bush(x + 1.2, y - 0.9, { z: 2.4, s: 0.9, pal: FERN, flowers: null, noBlock: true }); B.bush(x + 2.6, y - 1.2, { z: 1.2, s: 0.8, pal: FERN, flowers: null, noBlock: true });
+        boulder(x - 2.7, y + 0.5, 0.4); boulder(x + 2.4, y + 0.4, 0.3); fern(x - 1.4, y + 0.5, 0.8); fern(x + 1.3, y + 0.6, 0.7); }
+      /* pond clearing with deer */
+      { const [x, y] = GPOND; for (let i = 0; i < 11; i++) { const a = i * 2.4, r = 0.4 + h2(i, 8) * 1.1; B.disk(x + Math.cos(a) * r, y + Math.sin(a) * r, 0.012, 0.09 + h2(i, 2) * 0.05, (s, t, q, u, v) => (i % 4 ? (u > 0.5 && Math.abs(v - 0.5) < 0.12 ? 0x2f7f86 : 0x5a9a4a) : 0xf0a0b4), { noShadow: true, f: E.F_NOAO }); }
+        for (let i = 0; i < 16; i++) { const a = i / 16 * 6.283; if (a > 0.2 && a < 1.5) continue; fern(x + Math.cos(a) * 2.1, y + Math.sin(a) * 2.1, 0.55 + h2(i, 9) * 0.4); }
+        boulder(x - 1.9, y + 0.9, 0.34); boulder(x + 0.6, y - 2.0, 0.28); B.deer.push([x + 1.95, y + 0.75, 1, 1]); B.deer.push([x + 0.5, y + 2.25, 0, 4]); }
+      /* fairy ring + rune stone */
+      { const [x, y] = gW(10, -3.4); for (let i = 0; i < 11; i++) { const a = i / 11 * 6.283; glowshroom(x + Math.cos(a) * 1.05, y + Math.sin(a) * 1.05, 0.9 + h2(i, 3) * 0.7); }
+        B.box(x - 0.22, y - 0.16, 0, 0.44, 0.32, 1.25, { side: rockTex, P: { seed: 21 }, ty: (s, t, q) => { const X = Math.floor(s * U) - 7, Y = Math.floor(t * V) - 30; return (Math.abs(X) < 1 && Math.abs(Y) < 8) || (Math.abs(Y - X) < 1 && Math.abs(X) < 4 && Y > -1) || (Math.abs(Y + 4 + X) < 1 && Math.abs(X) < 4) ? (0x8af0ff | FE) : rockTex(s, t, q); }, top: T.flat(0x5a8a3a) });
+        B.blockC(x, y, 0.3); E.addLight(x + 0.3, y + 0.3, 0.6, 4.6, [0.3, 0.85, 0.9], 1.2); for (let i = 0; i < 5; i++) fern(x + Math.cos(i * 1.3 + 2.5) * 1.9, y + Math.sin(i * 1.3 + 2.5) * 1.9, 0.7); }
+      /* old woodcutter's clearing */
+      { const [x, y] = gW(22, -3.8); stump(x - 1.4, y + 0.4); stump(x + 0.2, y - 1.2); stump(x + 1.9, y + 0.6);
+        for (let r = 0; r < 3; r++) for (let i = 0; i < 3 - r; i++) B.box(x - 1.2, y - 0.9 + i * 0.36 + r * 0.18, r * 0.32, 1.7, 0.34, 0.32, { side: bark(0x5c4432), top: bark(0x66503a), tx: (s, t, q, a, b) => { const c = rings(s, t, q, a, b); return c < 0 ? 0x5c4432 : c; } });
+        B.block(x - 1.2, y - 0.9, 1.7, 1.1); B.cart(x + 0.6, y + 1.2);
+        B.box(x - 1.46, y + 0.36, 0.32, 0.05, 0.05, 0.5, { side: T.flat(0x6a4a34), noShadow: true }); B.box(x - 1.56, y + 0.36, 0.72, 0.24, 0.05, 0.14, { side: T.flat(0xa8aeb8), noShadow: true });
+        for (let i = 0; i < 8; i++) { const a = i / 8 * 6.283; E.blob([x - 0.2 + Math.cos(a) * 0.34, y + 2.0 + Math.sin(a) * 0.34, 0.05], 0.09, boulderTex(700 + i), { f: E.F_NOAO }); } }
+      /* rock face with a waterfall and pool */
+      { const [x, y] = gW(34, -4.4); ledge(x - 2.5, y - 2.9, 5.0, 2.7, 3.0, 31); ledge(x - 1.8, y - 3.8, 3.5, 1.7, 4.5, 32); ledge(x + 2.5, y - 2.4, 1.5, 1.8, 1.4, 33); ledge(x - 3.6, y - 2.2, 1.2, 1.6, 1.0, 34); B.block(x - 3.6, y - 3.8, 7.6, 3.7);
+        Q([x - 0.45, y - 0.18, 0], [0.9, 0, 0], [0, 0, 3.0], fallTexG, { n: [0, 1, 0], noShadow: true }); B.falls.push({ x0: x - 0.45, x1: x + 0.45, y: y - 0.16, z0: 0, z1: 3.0 });
+        Q([x - 0.45, y - 2.1, 3.015], [0.9, 0, 0], [0, 1.9, 0], (s, t) => T.water(s + 3, t), { n: [0, 0, 1], noShadow: true });
+        pine(x - 1.6, y - 1.4, 3.0, 0.8); pine(x + 1.5, y - 1.2, 3.0, 0.7); pine(x + 0.6, y - 3.1, 4.5, 0.8); B.bush(x + 3.1, y - 1.5, { z: 1.4, s: 0.9, pal: FERN, flowers: null, noBlock: true });
+        boulder(x - 1.7, y + 0.6, 0.42); boulder(x + 1.6, y + 1.3, 0.34); boulder(x + 1.1, y + 2.4, 0.22); for (let i = 0; i < 7; i++) fern(x - 2 + i * 0.7, y + 2.3 + h2(i, 5) * 0.4, 0.6); }
+      /* hermit's cottage at the end of the trail */
+      { const [x, y] = gW(45.2, -3.9); B.house({ x: x - 1.6, y: y - 1.5, w: 3.3, d: 2.9, floors: 1, axis: 'x', seed: 91, plaster: 0xd8c8a0, shutter: 0x4f7a52, roof: T.ROOF_BROWN, rise: 1.7,
+          fy: [{ k: 'door', x: 0.33, w: 18, h: 44, trim: 0xa8a294 }, { k: 'win', x: 0.76, y: 24, w: 14, h: 22, sill: 0xb8ae9c, frame: 0x4d3528, curtain: 0xa84a3a }], fx: [{ k: 'win', x: 0.5, y: 24, w: 14, h: 22, sill: 0xb8ae9c, frame: 0x4d3528, curtain: 0xd9c070 }] });
+        B.ivy('y', x - 1.3, y + 1.4, 2.6, 81, 0.4); B.ivy('x', y - 1.1, x + 1.7, 2.2, 83, 0.4); B.barrel(x + 2.2, y + 1.9); B.crate(x + 2.1, y + 0.9); B.pot(x - 2.0, y + 1.9, 0xa8604a); stump(x + 3.2, y + 2.6); B.bench(x - 0.2, y + 2.0, 'x');
+        for (let i = 0; i < 5; i++) glowshroom(x - 2.6 + h2(i, 2) * 0.8, y + 2.6 + h2(i, 3) * 0.6, 1); }
+
+      /* the forest itself */
+      const placed = [];
+      const far = (i, d, s) => { const [x, y] = W2(d, s), r = h2(i, 813); if (placed.some(p => Math.hypot(p[0] - x, p[1] - y) < p[2] + (r < 0.24 ? 1.5 : 0.95))) return;
+        if (r < 0.24) { placed.push([x, y, 1.5]); giant(x, y, 0.85 + h2(i, 814) * 0.3); } else if (r < 0.55) { placed.push([x, y, 0.95]); pine(x, y, 0, 1.0 + h2(i, 814) * 0.5); }
+        else if (r < 0.86) { placed.push([x, y, 0.95]); B.tree(x, y, { s: 1.3 + h2(i, 814) * 0.55, pal: [T.LEAF_D, T.LEAF_D, T.LEAF_G, PINE][i & 3], flowers: null, n: 10 }); } else { placed.push([x, y, 0.8]); birch(x, y, 1.0 + h2(i, 814) * 0.3); } };
+      for (let i = 0; i < 2600; i++) { const d = GD0 + 0.5 + h2(i, 811) * 99, s = GS0 - 7 + h2(i, 812) * (Gt(d) - 1.9 - GS0 + 7); if (clear(d, s) || Math.abs(d - GBR) < 1.2) continue; far(i, d, s); }
+      // near side: only tall-trunked giants, spaced out, so the path shows between them
+      let lastD = -99;
+      for (let d = GD0 + 3; d < GD1 - 2; d += 1.1) { const s = Gt(d) + 2.0 + h2(d * 10 | 0, 821) * 2.2; if (d - lastD < 7.5 + h2(d * 10 | 0, 822) * 4 || Math.abs(d - GBR) < 1.6 || KO.some(k => Math.abs(d - k[0]) < 2.6 && k[0] !== GBR)) continue; const [x, y] = W2(d, s); giant(x, y, 0.95 + h2(d * 10 | 0, 823) * 0.25); lastD = d; }
+      // undergrowth everywhere
+      for (let i = 0; i < 620; i++) {
+        const d = GD0 + 0.6 + h2(i, 831) * 98.8, s = GS0 + 0.6 + h2(i, 832) * (GS1 - GS0 - 1), [x, y] = W2(d, s), r = h2(i, 833), dt = Math.abs(s - Gt(d));
+        if (dt < 1.25 || Math.abs(d - GBR) < 0.9 || Math.hypot(x - GPOND[0], y - GPOND[1]) < 2.3 || Math.hypot(x - GPOOL[0], y - GPOOL[1]) < 1.6 || placed.some(p => Math.hypot(p[0] - x, p[1] - y) < 0.7)) continue;
+        if (r < 0.52) fern(x, y, 0.55 + h2(i, 834) * 0.55); else if (r < 0.66) B.bush(x, y, { s: 0.8 + h2(i, 834) * 0.5, pal: T.LEAF_D, fp: 0.08, noBlock: true });
+        else if (r < 0.78) boulder(x, y, 0.15 + h2(i, 834) * 0.28); else if (r < 0.9) { mushroom(x, y, 1.2); mushroom(x + 0.16, y + 0.07, 0.8); if (r < 0.84) mushroom(x - 0.05, y + 0.18, 1); }
+        else if (r < 0.94) { glowshroom(x, y, 1.1); glowshroom(x + 0.15, y + 0.1, 0.8); glowshroom(x - 0.1, y + 0.16, 0.9); if (h2(i, 835) < 0.3) E.addLight(x, y, 0.4, 2.6, [0.3, 0.85, 0.8], 0.8); }
+        else if (r < 0.97 && s > Gt(d)) stump(x, y);
+      }
+      for (let i = 0; i < 70; i++) { const d = GD0 + 2 + h2(i, 841) * 96, [x, y] = W2(d, Gt(d) + (h2(i, 842) - 0.5) * 9); B.flies.push([x, y, 0.5 + h2(i, 843) * 1.8, i]); }
+    },
+  };
+
   /* ---------- extra effects: fire, waterfall, fireflies / butterflies ---------- */
   Sim.fx = [function (t) {
     for (let k = 0; k < B.flames.length; k++) {
@@ -317,6 +443,19 @@
       const sx = Math.round(E.sx(x, y)), sy = Math.round(E.sy(x, y, z)), d = x + y + z + 0.2;
       if (night) { const b = Math.sin(t * 2.2 + s * 1.9); if (b < -0.2) continue; E.px(sx, sy, d, 0xf0ffa0); E.px(sx + 1, sy, d, 0xf0ffa0); E.px(sx, sy + 1, d, 0xd8f070); E.px(sx + 1, sy + 1, d, 0xd8f070); if (b > 0.4) { E.px(sx - 1, sy, d, 0x8aa84a); E.px(sx + 2, sy + 1, d, 0x8aa84a); E.px(sx, sy - 1, d, 0x8aa84a); E.px(sx + 1, sy + 2, d, 0x8aa84a); } }
       else if (s % 3 === 0) { const c = [0xf8f4e8, 0xf4d85a, 0x8ac8f4, 0xf09ab8][s % 4], up = Math.floor(t * 9 + s) & 1; E.px(sx, sy, d, 0x3a3038); E.px(sx - 1, sy - (up ? 1 : 0), d, c); E.px(sx + 1, sy - (up ? 1 : 0), d, c); if (up) { E.px(sx - 2, sy - 2, d, c); E.px(sx + 2, sy - 2, d, c); } else { E.px(sx - 2, sy, d, c); E.px(sx + 2, sy, d, c); } }
+    }
+    for (const g of B.deer) {       // deer at the pond
+      const x = g[0], y = g[1], flip = g[2], sd = g[3], sx = Math.round(E.sx(x, y)), sy = Math.round(E.sy(x, y, 0)), d0 = x + y + 0.1, L = E.lightAt(x, y, 0);
+      const P = (dx, dy, c) => E.px(sx + (flip ? -dx : dx), sy - dy, d0 + dy / 40, (Math.min(255, (c >> 16 & 255) * L[0]) << 16) | (Math.min(255, (c >> 8 & 255) * L[1]) << 8) | (Math.min(255, (c & 255) * L[2]) | 0));
+      const R = (x0, y0, x1, y1, c) => { for (let yy = y0; yy <= y1; yy++) for (let xx = x0; xx <= x1; xx++) P(xx, yy, c); };
+      const TAN = 0xb5824f, DK = 0x7a5232, CR = 0xe8dcc0, HO = 0x2e2420, graze = Math.sin(t * 0.45 + sd) > 0.15, ear = Math.sin(t * 3 + sd) > 0.85 ? 1 : 0;
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -11; dx <= 11; dx++) if (dx * dx / 121 + dy * dy / 5 < 1) E.dark(sx + dx, sy + dy, d0, 0.68);
+      R(-8, 0, -7, 9, DK); R(-5, 0, -4, 9, TAN); R(5, 0, 6, 9, DK); R(8, 0, 9, 9, TAN); R(-8, 0, -7, 0, HO); R(-5, 0, -4, 0, HO); R(5, 0, 6, 0, HO); R(8, 0, 9, 0, HO);
+      R(-9, 9, 10, 16, TAN); R(-8, 17, 9, 17, DK); R(-9, 15, 10, 16, DK); R(-6, 9, 7, 9, CR); R(-10, 11, -9, 15, CR); P(-11, 14, CR); P(-11, 15, DK);
+      if (sd & 4) for (let i = 0; i < 6; i++) P(-6 + i * 3, 13 + (i & 1), CR);
+      if (graze) { for (let i = 0; i < 7; i++) R(9 + i, 12 - i, 12 + i, 15 - i, i > 5 ? DK : TAN); R(15, 3, 20, 6, TAN); R(20, 3, 21, 4, HO); P(17, 5, HO); P(15, 7 + ear, DK); P(14, 8 + ear, DK); }
+      else { for (let i = 0; i < 8; i++) R(8 + (i >> 1), 15 + i, 12 + (i >> 1), 16 + i, TAN); R(11, 23, 17, 27, TAN); R(18, 23, 19, 25, TAN); R(19, 23, 20, 24, HO); P(15, 26, HO); R(12, 23, 15, 23, CR); P(11, 28 + ear, DK); P(10, 29 + ear, DK); P(13, 28, DK);
+        if (!(sd & 4)) { for (let i = 0; i < 5; i++) { P(12, 28 + i, 0xd8c8a0); P(15, 28 + i, 0xd8c8a0); } P(11, 31, 0xd8c8a0); P(10, 32, 0xd8c8a0); P(16, 31, 0xd8c8a0); P(17, 32, 0xd8c8a0); P(13, 32, 0xd8c8a0); P(16, 33, 0xd8c8a0); } }
     }
     for (const g of B.gulls) {      // gulls wheeling over the water
       const a = t * 0.3 + g[3], d = g[0] + Math.cos(a) * g[4] * 2.2, ss = Cc(d) + g[1] + Math.sin(a) * g[4], x = (ss + d) / 2, y = (ss - d) / 2, z = g[2] + Math.sin(t * 0.5 + g[3]) * 0.4;
