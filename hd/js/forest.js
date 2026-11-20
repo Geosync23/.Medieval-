@@ -42,7 +42,7 @@
   let sdc = 500;
   function pine(x, y, z, s) {
     const sd = sdc++ * 11, tex = T.leaves(PINE, null, 0), tiers = 6;
-    B.cyl(x, y, z, 0.14 * s, 1.3 * s, 6, bark(0x4f3a2c), {});
+    B.taper(x, y, z, 0.24 * s, x, y, z + 0.4 * s, 0.14 * s, 7, bark(0x4f3a2c)); B.taper(x, y, z + 0.4 * s, 0.14 * s, x, y, z + 1.5 * s, 0.08 * s, 7, bark(0x4f3a2c));
     for (let i = 0; i < tiers; i++) {
       const zz = z + (0.95 + i * 0.64) * s, R = (1.08 - i * 0.165) * s, n = i < 4 ? 6 : 4;
       for (let j = 0; j < n; j++) { const a = j / n * 6.283 + i * 0.5; E.blob([x + Math.cos(a) * R * 0.56, y + Math.sin(a) * R * 0.56, zz - 0.1 * s], R * 0.48, tex, { seed: sd + i * 7 + j }); }
@@ -53,7 +53,7 @@
   }
   function birch(x, y, s) {
     const sd = sdc++ * 13, tex = T.leaves(T.LEAF_Y, null, 0), tex2 = T.leaves(T.LEAF_G, null, 0), hgt = 3.3 * s;
-    B.cyl(x, y, 0, 0.09 * s, hgt, 6, birchBark, {});
+    B.taper(x, y, 0, 0.13 * s, x, y, hgt, 0.05 * s, 7, birchBark);
     for (let i = 0; i < 11; i++) { const a = h2(sd, i) * 6.283, rr = h2(sd + 1, i) * 0.75 * s; E.blob([x + Math.cos(a) * rr, y + Math.sin(a) * rr, hgt * (0.68 + h2(sd + 2, i) * 0.42)], (0.3 + h2(sd + 3, i) * 0.24) * s, i % 3 ? tex : tex2, { seed: sd + i }); }
     B.blockC(x, y, 0.25);
   }
@@ -214,7 +214,7 @@
   const landZ = (x, y) => { const i = Math.floor(x); if (hillH[i] === undefined) return 0; return y < hillY2[i] ? hillH[i] + 1.3 : y < hillY[i] ? hillH[i] : 0; };
   function windTree(x, y, z, s) {
     const sd = sdc++ * 7, tex = T.leaves(PINE, null, 0), bk = bark(0x4f3a2c);
-    for (let i = 0; i < 5; i++) B.cyl(x + i * 0.05 * s, y - i * 0.05 * s, z + i * 0.4 * s, (0.16 - i * 0.018) * s, 0.44 * s, 6, bk, {});
+    B.taper(x, y, z, 0.26 * s, x + 0.05 * s, y - 0.05 * s, z + 0.4 * s, 0.16 * s, 7, bk); B.taper(x + 0.05 * s, y - 0.05 * s, z + 0.4 * s, 0.16 * s, x + 0.16 * s, y - 0.16 * s, z + 1.2 * s, 0.12 * s, 7, bk); B.taper(x + 0.16 * s, y - 0.16 * s, z + 1.2 * s, 0.12 * s, x + 0.36 * s, y - 0.36 * s, z + 2.1 * s, 0.06 * s, 7, bk);
     for (let i = 0; i < 14; i++) { const k = 0.15 + i * 0.075 + h2(sd, i) * 0.15; E.blob([x + k * s + (h2(sd + 1, i) - 0.5) * 0.7 * s, y - k * s + (h2(sd + 2, i) - 0.5) * 0.7 * s, z + (1.9 + h2(sd + 3, i) * 0.8) * s], (0.5 - i * 0.014) * s, tex, { seed: sd + i }); }
     if (!z) B.blockC(x, y, 0.3);
   }
@@ -330,8 +330,9 @@
   }
   function giant(x, y, s) {
     const sd = sdc++ * 17, bk = bark(0x4a372b), tex = T.leaves(T.LEAF_D, null, 0), tex2 = T.leaves(PINE, null, 0), moss = T.leaves(FERN, null, 0);
-    for (let i = 0; i < 6; i++) { const a = i / 6 * 6.283 + h2(sd, i); B.cyl(x + Math.cos(a) * 0.5 * s, y + Math.sin(a) * 0.5 * s, 0, 0.24 * s, 0.22 + h2(sd + 1, i) * 0.25, 6, bk, {}); }
-    B.cyl(x, y, 0, 0.56 * s, 1.5 * s, 10, bk, {}); B.cyl(x, y, 1.5 * s, 0.47 * s, 1.5 * s, 10, bk, {}); B.cyl(x, y, 3.0 * s, 0.38 * s, 1.9 * s, 8, bk, {});
+    B.taper(x, y, 0, 0.98 * s, x, y, 0.8 * s, 0.58 * s, 12, bk); B.taper(x, y, 0.8 * s, 0.58 * s, x, y, 5.0 * s, 0.33 * s, 12, bk);
+    for (let i = 0; i < 5; i++) { const a = i / 5 * 6.283 + h2(sd, i), rr = 0.86 * s; B.taper(x + Math.cos(a) * rr, y + Math.sin(a) * rr, 0, 0.2 * s, x + Math.cos(a) * 0.4 * s, y + Math.sin(a) * 0.4 * s, (0.7 + h2(sd + 1, i) * 0.5) * s, 0.1 * s, 5, bk); }   // buttress roots
+    for (let i = 0; i < 4; i++) { const a = i * 1.57 + h2(sd + 13, i) * 1.2, rr = (1.2 + h2(sd + 14, i) * 0.5) * s; B.taper(x, y, (3.4 + i * 0.3) * s, 0.2 * s, x + Math.cos(a) * rr, y + Math.sin(a) * rr, (4.9 + i * 0.15) * s, 0.07 * s, 6, bk); }   // limbs
     for (let i = 0; i < 7; i++) { const a = 0.8 + h2(sd + 2, i) * 2.2; E.blob([x + Math.cos(a) * 0.55 * s, y + Math.sin(a) * 0.55 * s, 0.2 + h2(sd + 3, i) * 1.5], 0.12 + h2(sd + 4, i) * 0.1, moss, { seed: sd + i }); }
     const top = 5.9 * s;
     E.blob([x, y, top], 1.55 * s, tex, { seed: sd });

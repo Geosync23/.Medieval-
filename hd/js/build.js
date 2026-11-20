@@ -83,13 +83,24 @@ const B = {};
     Q([cx - r, cy - r, z], [2 * r, 0, 0], [0, 2 * r, 0], T.disk(o.inner || 0, tex), Object.assign({ n: [0, 0, 1], cut: true }, o));
   };
 
+  /* tapered trunk / branch: a smooth frustum from (x0,y0,z0) radius r0 to (x1,y1,z1) radius r1 */
+  B.taper = function (x0, y0, z0, r0, x1, y1, z1, r1, n, tex, o) {
+    o = o || {}; const st = 6.28318 / n, a0 = 2.35619, h = Math.hypot(x1 - x0, y1 - y0, z1 - z0), seg = 2 * r0 * Math.sin(Math.PI / n);
+    for (let i = 0; i < n; i++) {
+      const a = a0 - i * st, b = a - st, am = a - st / 2, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
+      const b0 = [x0 + r0 * ca, y0 + r0 * sa, z0], b1 = [x0 + r0 * cb, y0 + r0 * sb, z0], t0 = [x1 + r1 * ca, y1 + r1 * sa, z1], t1 = [x1 + r1 * cb, y1 + r1 * sb, z1];
+      const nn = [Math.cos(am), Math.sin(am), 0], vis = nn[0] + nn[1] > -0.05, op = { P: o.P, n: vis ? nn : undefined, tri: true, shadowOnly: !vis };
+      Q(b0, [b1[0] - b0[0], b1[1] - b0[1], 0], [t0[0] - b0[0], t0[1] - b0[1], t0[2] - b0[2]], (s, t, q, u, v) => tex((i + u) * seg, v * h, q, u, v), op);
+      Q(t1, [t0[0] - t1[0], t0[1] - t1[1], 0], [b1[0] - t1[0], b1[1] - t1[1], b1[2] - t1[2]], (s, t, q, u, v) => tex((i + 1 - u) * seg, (1 - v) * h, q, u, v), Object.assign({}, op));
+    }
+  };
   /* ---------- foliage ---------- */
   let seedc = 1;
   B.tree = function (x, y, o) {
     o = o || {}; const sc = o.s || 1, sd = seedc++ * 13, pl = o.pal || T.LEAF_G, fl = o.flowers === undefined ? T.BLOSSOM : o.flowers, fp = o.fp || 0.06;
     const tex = T.leaves(pl, fl, fp), th = 0.95 * sc;
     const bark = (u, v) => { const X = Math.floor(u * 32), Y = Math.floor(v * 40); return T.mul(0x6b4a36, ((X + (Y >> 3)) % 4 === 0 ? 0.7 : 0.95) + h2(X, Y >> 2) * 0.16); };
-    B.cyl(x, y, 0, 0.2 * sc, 0.12, 8, bark, {}); B.cyl(x, y, 0, 0.15 * sc, th + 0.7 * sc, 8, bark, {});
+    B.taper(x, y, 0, 0.3 * sc, x, y, 0.45 * sc, 0.17 * sc, 8, bark); B.taper(x, y, 0.45 * sc, 0.17 * sc, x, y, th + 0.7 * sc, 0.1 * sc, 8, bark);
     const R = (i) => h2(sd + i, i * 7 + 1);
     const bl = (dx, dy, dz, r, i) => E.blob([x + dx * sc, y + dy * sc, th + dz * sc], r * sc, tex, { seed: sd + i * 5 });
     bl(0, 0, 1.0, 0.9, 0);
