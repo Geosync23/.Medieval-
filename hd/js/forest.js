@@ -419,6 +419,8 @@
     },
   };
 
+  B.flora = { pine, birch, boulder, fern, mushroom, log, stump, giant, glowshroom, bark, rockTex, floorTex, deepFloor, boulderTex, rings };
+
   /* ---------- extra effects: fire, waterfall, fireflies / butterflies ---------- */
   Sim.fx = [function (t) {
     for (let k = 0; k < B.flames.length; k++) {

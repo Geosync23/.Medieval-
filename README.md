@@ -32,3 +32,11 @@ per-pixel depth test, so it costs about 1 ms per frame.
 dithered shadow edges, ambient occlusion, edge highlights, richer wall / roof / cobble textures,
 3D flower boxes, ivy, lanterns, shop signs, baskets of produce and ~30px-tall villagers.
 It bakes in about 1.3 s and uses a leaner G-buffer (world position is reconstructed from depth).
+
+## Combat tests (`hd/combat.html`)
+
+One forest clearing, waves of bandits, archers and brutes, and four switchable control schemes:
+**Swipe** (hold to move, swipe to strike, hold the king to block, swipe from the king to roll),
+**King's Guard** (the king swings on his own when he stands still; three knights fight beside him),
+**Duel** (one opponent at a time on a balance bar) and **Draw & loose** (pull back from the king and
+release to dash through a line of enemies). All logic is in `hd/js/combat.js`.

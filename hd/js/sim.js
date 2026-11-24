@@ -211,19 +211,21 @@ const Sim = {};
     else if (p.hat === 2) { rect(cx - 4, ht - 3, cx + 2, ht - 1, p.hatc); rect(cx - 3, ht, cx + 1, ht, dk(p.hatc, 1.2)); rect(cx - 4, ht - 3, cx + 2, ht - 3, dk(p.hatc, 0.7)); rect(cx + 3, ht - 4, cx + 3, ht - 2, dk(p.hatc, 0.8)); sp(cx + 4, ht - 5, dk(p.hatc, 0.8)); }
     else if (p.hat === 3) { const hc = fem ? 0xf0ece0 : p.hatc; rect(cx - 5, hb + 1, cx - 4, ht - 1, hc); rect(cx - 4, ht - 3, cx + 2, ht - 1, hc); rect(cx - 3, ht, cx + 1, ht, dk(hc, 1.1)); rect(cx + 2, hb + 1, cx + 3, ht - 2, dk(hc, 0.8)); if (!back) { sp(cx - 2, ht - 3, skin); sp(cx - 1, ht - 3, skin); sp(cx, ht - 3, skin); } }
     // --- blit with outline + lighting ---
-    const zs = p.z || 0, ox = flip ? -cx : cx;
+    const zs = p.z || 0, sc = p.scale || 1, ox = Math.round((flip ? -cx : cx) * sc), fl = p.flash || 0, fade = p.fade || 0;
     const sx = Math.round(E.sx(p.x, p.y)) - ox, sy = Math.round(E.sy(p.x, p.y, zs)), d0 = p.x + p.y + zs + 0.08;
     const L = E.lightAt(p.x, p.y, zs);
     if (!zs) for (let dy = -3; dy <= 3; dy++) { const hw = Math.round(8 * Math.sqrt(1 - dy * dy / 12)); for (let dx = -hw; dx <= hw; dx++) E.dark(sx + ox + dx, sy + dy, d0, 0.66); }
     const OUT = T.mul(0x2a2230, Math.min(1.2, (L[0] + L[1] + L[2]) / 3));
-    for (let y = 0; y < GHt; y++) for (let x = 0; x < GWd; x++) {
-      const c = G[y * GWd + x], px = sx + (flip ? -x : x), py = sy - y, d = d0 + y / 40;
+    for (let yy = 0; yy < GHt * sc; yy++) for (let xx = 0; xx < GWd * sc; xx++) {
+      const x = (xx / sc) | 0, y = (yy / sc) | 0, c = G[y * GWd + x], px = sx + (flip ? -xx : xx), py = sy - yy, d = d0 + yy / 40;
+      if (fade && h2(xx, yy) < fade) continue;
       if (c < 0) { if ((x > 0 && G[y * GWd + x - 1] >= 0) || (x < GWd - 1 && G[y * GWd + x + 1] >= 0) || (y > 0 && G[(y - 1) * GWd + x] >= 0) || (y < GHt - 1 && G[(y + 1) * GWd + x] >= 0)) E.px(px, py, d, OUT); continue; }
       let r = (c >> 16 & 255) * L[0], g = (c >> 8 & 255) * L[1], b = (c & 255) * L[2];
+      if (fl) { r += (255 - r) * fl; g += (255 - g) * fl; b += (255 - b) * fl; }
       if (r > 255) r = 255; if (g > 255) g = 255; if (b > 255) b = 255;
       E.px(px, py, d, (r << 16) | (g << 8) | (b | 0));
     }
-    p.scrX = sx + ox; p.scrY = sy - 16;
+    p.scrX = sx + ox; p.scrY = sy - 16; p.scrTop = sy - Math.round((ht + 3) * sc);
     if (p.bubble > 0 && !p.moving) {
       const bx = p.scrX + 6, by = sy - (ht + 16), dd = d0 + 2;
       for (let y = 0; y < 10; y++) for (let x = 0; x < 18; x++) { const edge = (x < 2 || x > 15) && (y < 2 || y > 7); if (!edge) E.px(bx + x, by + y, dd, (x < 2 || x > 15 || y < 2 || y > 7) ? 0x3a3038 : 0xf8f4e8); }
@@ -301,6 +303,7 @@ const Sim = {};
     for (const p of list) drawPerson(p, t);
     drawJets(t); if (Sim.fx) for (const f of Sim.fx) f(t); drawSmoke(t); drawFlags(t);
   };
+  Sim.drawPerson = drawPerson;
   Sim.personAt = function (lx, ly) {
     let best = null, bd = 26;
     for (const p of people) { const d = Math.hypot(p.scrX - lx, p.scrY - ly); if (d < bd) { bd = d; best = p; } }

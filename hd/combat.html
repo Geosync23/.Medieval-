@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>King Simulator — Combat Tests</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #14111a; overflow: hidden; color: #f1e6c8;
+    font-family: "Courier New", ui-monospace, Menlo, Consolas, monospace; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  #view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; image-rendering: pixelated; image-rendering: crisp-edges; }
+  .bar { position: fixed; left: 0; right: 0; display: flex; gap: 6px; padding: 8px; flex-wrap: wrap; align-items: center; pointer-events: none; z-index: 3; }
+  #top { top: 0; } #bottom { bottom: 0; align-items: flex-end; justify-content: space-between; }
+  .grp { display: flex; pointer-events: auto; box-shadow: 0 3px 0 #0b090e; }
+  button { font: inherit; font-weight: 700; font-size: 12px; letter-spacing: .5px; color: #e9dcb8; background: #3b2f3f; border: 2px solid #1b1520;
+    border-left-width: 0; padding: 8px 10px; cursor: pointer; text-transform: uppercase; box-shadow: inset 0 2px 0 #5a4a5c, inset 0 -3px 0 #2a2030; }
+  .grp button:first-child { border-left-width: 2px; }
+  button.on { background: #c9a04a; color: #2a1c10; box-shadow: inset 0 2px 0 #f0d480, inset 0 -3px 0 #96702a; }
+  button:active { transform: translateY(1px); }
+  #hud { position: fixed; top: 54px; left: 8px; z-index: 3; pointer-events: none; width: min(300px, 62vw); }
+  .meter { height: 12px; border: 2px solid #1b1520; background: #2a2030; margin-bottom: 4px; box-shadow: 0 2px 0 #0b090e; position: relative; }
+  .meter b { display: block; height: 100%; width: 100%; }
+  #hp b { background: linear-gradient(#e2584c, #a8322e); } #st b { background: linear-gradient(#e8c84a, #b8922a); } #st { height: 8px; }
+  #bal b { background: linear-gradient(#8ac8f0, #4a86c0); } #bal { height: 8px; display: none; }
+  .meter span { position: absolute; left: 6px; top: -1px; font-size: 10px; font-weight: 700; color: #fff; text-shadow: 1px 1px 0 #000; line-height: 12px; }
+  #wave { font-size: 12px; font-weight: 700; color: #e9dcb8; text-shadow: 1px 1px 0 #000; margin-top: 2px; }
+  #allies { display: flex; gap: 4px; margin-top: 5px; flex-wrap: wrap; }
+  .ally { font-size: 10px; background: rgba(20,17,26,.8); border: 2px solid #1b1520; padding: 2px 5px; } .ally i { display: block; height: 3px; background: #6ab04a; margin-top: 2px; } .ally.dead { opacity: .45; text-decoration: line-through; }
+  #help { pointer-events: auto; background: #e9dcb8; color: #2a1c10; border: 2px solid #1b1520; box-shadow: inset 0 0 0 2px #c9b684, 0 3px 0 #0b090e;
+    padding: 8px 12px; font-size: 12px; line-height: 1.4; max-width: min(380px, 92vw); }
+  #help b { font-size: 14px; } #help ul { margin: 4px 0 0; padding-left: 16px; } #help i { color: #6a4a2a; font-style: normal; }
+  #help.min ul, #help.min i { display: none; }
+  #msg { position: fixed; left: 0; right: 0; top: 34%; text-align: center; font-size: 26px; font-weight: 700; letter-spacing: 2px; color: #f4e6b8;
+    text-shadow: 2px 2px 0 #1b1520, -1px -1px 0 #1b1520; z-index: 4; pointer-events: none; opacity: 0; transition: opacity .25s; }
+  #msg.on { opacity: 1; } #msg small { display: block; font-size: 13px; letter-spacing: 1px; margin-top: 6px; }
+  #pops { position: fixed; inset: 0; pointer-events: none; z-index: 2; overflow: hidden; }
+  .pop { position: absolute; font-weight: 700; font-size: 15px; color: #fff; text-shadow: 1px 1px 0 #000, -1px 0 0 #000, 0 -1px 0 #000; transform: translate(-50%, -50%); white-space: nowrap; }
+  .pop.hurt { color: #ff7a6a; } .pop.good { color: #ffe27a; font-size: 17px; } .pop.info { color: #9ad8ff; font-size: 13px; }
+  #busy { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; letter-spacing: 2px; background: rgba(20,17,26,.6); z-index: 6; pointer-events: none; opacity: 0; transition: opacity .12s; }
+  #busy.on { opacity: 1; }
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div class="bar" id="top">
+  <div class="grp" id="modes"></div>
+  <div class="grp"><button id="restart">Restart</button><button id="snd">Sound off</button></div>
+</div>
+<div id="hud">
+  <div class="meter" id="hp"><b></b><span>KING</span></div>
+  <div class="meter" id="st"><b></b></div>
+  <div class="meter" id="bal"><b></b></div>
+  <div id="wave"></div>
+  <div id="allies"></div>
+</div>
+<div id="pops"></div>
+<div id="msg"></div>
+<div class="bar" id="bottom"><div id="help"></div></div>
+<div id="busy">PAINTING…</div>
+<script src="js/engine.js"></script>
+<script src="js/tex.js"></script>
+<script src="js/build.js"></script>
+<script src="js/scenes.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/forest.js"></script>
+<script src="js/combat.js"></script>
+</body>
+</html>
