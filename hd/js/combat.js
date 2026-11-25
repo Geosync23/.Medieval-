@@ -47,7 +47,7 @@
     const cx = 6.6, cy = 6.9;
     for (let i = 0; i < 9; i++) { const a = i / 9 * TAU; E.blob([cx + Math.cos(a) * 0.36, cy + Math.sin(a) * 0.36, 0.05], 0.1, F.boulderTex(900 + i), { f: E.F_NOAO }); }
     B.box(cx - 0.25, cy - 0.05, 0, 0.5, 0.1, 0.1, { side: F.bark(0x4a3626) }); B.box(cx - 0.05, cy - 0.25, 0.06, 0.1, 0.5, 0.1, { side: F.bark(0x3a2a1e) });
-    B.flames.push({ x: cx, y: cy, z: 0.16, s: 2.2 }); E.addLight(cx, cy, 0.7, 7, [1.0, 0.6, 0.25], 1.6); obst.push({ x: cx, y: cy, r: 0.5 });
+    B.flames.push({ x: cx, y: cy, z: 0.16, s: 2.2 }); E.addLight(cx, cy, 0.7, 7, [1.0, 0.6, 0.25], 1.6); obst.push({ x: cx, y: cy, r: 0.5, fire: true });
     B.box(cx - 1.7, cy + 0.5, 0, 1.3, 0.32, 0.26, { side: F.bark(0x5c4432), top: F.bark(0x6a5038) }); obst.push({ x: cx - 1.05, y: cy + 0.66, r: 0.5 });
     B.crate(cx + 0.9, cy - 1.5); B.barrel(cx + 1.6, cy - 1.3); B.sack(cx - 0.6, cy - 1.5); B.crate(cx + 1.0, cy - 1.45, 0.45, 0.4); obst.push({ x: cx + 1.3, y: cy - 1.3, r: 0.62 });
     F.log(15.6, 17.9, 2.2); for (let i = 0; i < 3; i++) obst.push({ x: 16.0 + i * 0.7, y: 18.1, r: 0.4 });
@@ -164,6 +164,7 @@
     if (o === K && mode.id === 'moment') dmg *= 1 - 0.5 * mode.meter();     // a fast king is a glancing target
     dmg = Math.round(dmg * (0.9 + rnd() * 0.2));
     o.hp -= dmg; o.flash = 1; o.poise -= pd; o.kx -= Math.cos(from) * (fin ? 5 : 2.4); o.ky -= Math.sin(from) * (fin ? 5 : 2.4);
+    if (spec.push) { const m = o.kind === 'brute' ? 2.4 : 1; o.kx -= Math.cos(from) * spec.push / m; o.ky -= Math.sin(from) * spec.push / m; }
     pop(o, fin && (f === K || f.byK) ? 'FINISHER ' + dmg : '' + dmg, o.team === 0 ? 'hurt' : fin ? 'good' : '');
     sparks(o.x, o.y, 0.9, o.team === 0 ? 0xff6a5a : 0xffe9a0, fin ? 14 : 7); sfx(o === K ? 'hurt' : 'hit');
     if (f === K || f.byK || o === K) { shake = Math.max(shake, o === K ? 5 : fin ? 6 : 2.5); if (f === K || f.byK) hitStop = Math.max(hitStop, fin ? 0.13 : 0.05); }
@@ -177,7 +178,7 @@
     const s = f.atk; let n = 0;
     for (const o of F) { if (o.team === f.team || !o.alive) continue; const dx = o.x - f.x, dy = o.y - f.y, d = Math.hypot(dx, dy); if (d < s.reach + o.r && adiff(Math.atan2(dy, dx), f.face) < s.arc / 2) { if (hit(o, f, s)) n++; else n += 0.001; } }
     fx.push({ k: 'sw', x: f.x, y: f.y, face: f.face, reach: s.reach, arc: s.arc, t: 0, life: 0.2, col: f.team ? 0xffb0a0 : 0xffffff });
-    if (f === K) sfx('swing');
+    if (f === K) { sfx('swing'); if (mode.onSwing) mode.onSwing(s); }
     if (n === 0 && s.heavy && mode.id === 'duel' && f !== K) { f.poise -= f.spec.poise * 0.6; pop(f, 'whiff!', 'good'); if (f.poise <= 0) { stagger(f, 1.8); pop(f, 'OFF BALANCE', 'good'); return; } }
     f.state = 'rec'; f.st = s.rec; f.swingT = 0;
   }
@@ -221,7 +222,8 @@
   /* ---------- the king, per control scheme ---------- */
   const CUT = { wind: 0.1, reach: 1.3, arc: 1.9, dmg: 13, pd: 14, rec: 0.2, lunge: 0.35, sta: 11 }, LUNGE = { wind: 0.22, reach: 1.5, arc: 1.1, dmg: 28, pd: 34, rec: 0.42, lunge: 1.7, sta: 24 },
     FINISH = { wind: 0.16, reach: 1.5, arc: 2.7, dmg: 22, pd: 40, rec: 0.38, lunge: 0.5, sta: 14 }, AUTO = { wind: 0.16, reach: 1.3, arc: 1.9, dmg: 15, pd: 16, rec: 0.3, lunge: 0.2 }, DUEL = { wind: 0.2, reach: 1.3, arc: 1.6, dmg: 9, pd: 20, rec: 0.3, lunge: 0.15 };
-  const JAB = { wind: 0.1, reach: 1.25, arc: 1.6, dmg: 7, pd: 8, rec: 0.25 }, BEAT = 0.6; let HM = { out: false }, HD = null, RH = null;
+  const JAB = { wind: 0.1, reach: 1.25, arc: 1.6, dmg: 7, pd: 8, rec: 0.25 }, BEAT = 0.6; let HM = { out: false }, HD = null, RH = null, FL = null, PR = [];
+  const BASH = { wind: 0.1, reach: 1.5, arc: 2.0, dmg: 4, pd: 30, rec: 0.3, lunge: 0.3, push: 9.5 }, BASH2 = { wind: 0.22, reach: 1.6, arc: 1.6, dmg: 7, pd: 50, rec: 0.45, lunge: 1.7, push: 14.5 };
   const spend = c => { K.sta -= c; K.staD = 0.55; };
   function nearestEnemy(x, y, max, dir, cone) { let b = null, bd = max; for (const o of F) if (o.team === 1 && o.alive) { const d = Math.hypot(o.x - x, o.y - y); if (d < bd && (dir === undefined || adiff(Math.atan2(o.y - y, o.x - x), dir) < cone)) { bd = d; b = o; } } return b; }
   function kingSwing(dir, heavy) {
@@ -402,6 +404,68 @@
       draw() { const p = (RH.t % BEAT) / BEAT, hot = p < 0.15 || p > 0.85; sector(K.x, K.y, 0, 0.75, 7, hot ? 0xffe27a : 0xb8a888, hot ? 0.8 : 0.4, 0.1); sector(K.x, K.y, 0, 0.75 + (1 - p) * 1.5, 7, 0xffffff, 0.25 + 0.4 * p, 0.08); },
       meter() { return RH.combo / 8; },
     },
+    /* ---- physics: an iron ball on a chain, simulated as a rope ---- */
+    flail: {
+      id: 'flail', name: 'Ball & chain', tokens: 3, extra: 1, title: 'Swing the iron ball',
+      help: ['The king swings a <b>heavy iron ball on a chain</b>; it is real rope physics', '<b>Hold</b> to move. While he is on the move he keeps the ball <b>whirling round him</b>; walk the circle into the enemy', 'The ball hurts whatever it hits, <b>harder the faster it is moving</b> (yellow bar)', '<b>Tap</b> to yank the ball back toward you, through anyone in the way', '<b>Flick</b> to dash; the chain snaps the ball after you'],
+      init() { FL = { p: [], hitAt: new Map(), sp: 0 }; for (let i = 0; i < 8; i++) FL.p.push({ x: K.x, y: K.y + i * 0.1, px: K.x, py: K.y + i * 0.1 }); K.noWeapon = true; },
+      down(g) { K.hold = [g.wx, g.wy]; }, move(g) { K.hold = [g.wx, g.wy]; },
+      up(g) { K.hold = null; if (g.el < 0.3 && g.dist > 40) dodge(g.wdir, 2.1, 16); else if (g.el < 0.22 && g.dist < 14) { const b = FL.p[7], dx = K.x - b.x, dy = K.y - b.y, d = Math.hypot(dx, dy) || 1; b.px = b.x - dx / d * 0.24; b.py = b.y - dy / d * 0.24; sfx('dash'); } },
+      update(dt) {
+        const P = FL.p, n = P.length, SEG = 0.21, damp = Math.pow(0.8, dt);
+        { // while the king is on the move he keeps the ball swinging round him
+          const q = P[n - 1], rx = q.x - K.x, ry = q.y - K.y, rd = Math.hypot(rx, ry) || 1, vx = q.x - q.px, vy = q.y - q.py, sp0 = Math.hypot(vx, vy) / dt;
+          if (K.hold && K.state === 'idle' && rd > 0.8 && sp0 < 9.5) { const dir = (rx * vy - ry * vx) >= 0 ? 1 : -1, a = 9 * dt * dt; q.px -= -ry / rd * dir * a; q.py -= rx / rd * dir * a; }
+        }
+        for (let i = 1; i < n; i++) { const q = P[i], vx = (q.x - q.px) * damp, vy = (q.y - q.py) * damp; q.px = q.x; q.py = q.y; q.x += vx; q.y += vy; }
+        for (let it = 0; it < 8; it++) { P[0].x = K.x; P[0].y = K.y; for (let i = 1; i < n; i++) { const a = P[i - 1], b = P[i], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1e-6; if (d <= SEG) continue; const df = (d - SEG) / d, wa = i === 1 ? 0 : i === n - 1 ? 0.85 : 0.5; a.x += dx * df * wa; a.y += dy * df * wa; b.x -= dx * df * (1 - wa); b.y -= dy * df * (1 - wa); } }
+        const b = P[n - 1]; let vx = (b.x - b.px) / dt, vy = (b.y - b.py) / dt, sp = Math.hypot(vx, vy);
+        for (const o of obst) { const dx = b.x - o.x, dy = b.y - o.y, d = Math.hypot(dx, dy) || 1; if (d < o.r + 0.22) { b.x = o.x + dx / d * (o.r + 0.22); b.y = o.y + dy / d * (o.r + 0.22); if (sp > 5) { sparks(b.x, b.y, 0.3, 0xd8dce4, 4); sfx('block'); } b.px = b.x; b.py = b.y; } }
+        if (sp > 3) for (const o of F) if (o.team === 1 && o.alive && Math.hypot(o.x - b.x, o.y - b.y) < o.r + 0.34 && (FL.hitAt.get(o) || -9) < time - 0.35) {
+          FL.hitAt.set(o, time); if (hit(o, { x: b.x - vx * 0.1, y: b.y - vy * 0.1, team: 0, byK: true }, { dmg: Math.min(44, 3 + sp * 2.4), pd: sp * 5 })) { const m = o.kind === 'brute' ? 2.4 : 1; o.kx += vx * 0.5 / m; o.ky += vy * 0.5 / m; }
+          b.px = b.x - (b.x - b.px) * 0.6; b.py = b.y - (b.y - b.py) * 0.6;
+        }
+        FL.sp += (sp - FL.sp) * 0.3;
+      },
+      meter() { return FL.sp / 13; },
+      sprites() { const b = FL.p[7]; return [{ k: b.x + b.y, draw() { const cx = Math.round(E.sx(b.x, b.y)), cy = Math.round(E.sy(b.x, b.y, 0.22)), d = b.x + b.y + 0.4, hot = FL.sp > 7; for (let dy = -2; dy <= 2; dy++) for (let dx = -7; dx <= 7; dx++) if (dx * dx / 49 + dy * dy / 5 < 1) E.dark(cx + dx, Math.round(E.sy(b.x, b.y, 0)) + dy, b.x + b.y + 0.02, 0.62); for (let dy = -5; dy <= 5; dy++) for (let dx = -5; dx <= 5; dx++) { const r2 = dx * dx + dy * dy; if (r2 > 27) continue; E.px(cx + dx, cy + dy, d, r2 > 19 ? 0x2a2a32 : dx + dy < -3 ? 0x9aa0ac : dx + dy < 2 ? 0x5a5e6a : 0x3e404a); } for (const s of [[-7, 0], [7, 0], [0, -7], [0, 7], [-5, -5], [5, 5], [5, -5], [-5, 5]]) rectS(cx + s[0] - 1, cy + s[1] - 1, 2, 2, d, hot ? 0xffe9a0 : 0xc8ced8); } }]; },
+      drawTop() { const P = FL.p; for (let i = 0; i < 7; i++) for (let k = 0; k < 2; k++) { const u = k / 2, x = P[i].x + (P[i + 1].x - P[i].x) * u, y = P[i].y + (P[i + 1].y - P[i].y) * u, z = 0.6 - 0.38 * ((i + u) / 7); rectS(Math.round(E.sx(x, y)), Math.round(E.sy(x, y, z)), 2, 2, x + y + z + 0.3, (i * 2 + k) & 1 ? 0xc8ced8 : 0x55555e); } },
+    },
+    /* ---- physics: shove bodies into rocks, trees, the fire and each other ---- */
+    shove: {
+      id: 'shove', name: 'Shield bash', tokens: 3, extra: 1, slide: 0.05, title: 'Knock them into things',
+      help: ['The bash itself barely hurts. <b>What they hit does</b>: rocks, the tree line, the campfire, each other', '<b>Swipe</b> to shield-bash that way; a <b>long swipe</b> is a charging bash that throws them much further', 'Bodies carry momentum and <b>knock on</b> into the next man', 'Three loose <b>barrels</b> can be bashed across the clearing', '<b>Hold the ground</b> to walk, <b>hold the king</b> to brace behind the shield'],
+      init() { PR = [[10.6, 11.2], [14.2, 13.0], [12.2, 15.4]].map(p => ({ x: p[0], y: p[1], vx: 0, vy: 0, r: 0.3, rot: 0, hitAt: new Map() })); },
+      down(g) { if (g.onKing) startBlock(); },
+      move(g) { if (g.onKing) return; if (g.el > 0.17) { g.holding = true; K.hold = [g.wx, g.wy]; K.dest = null; } },
+      up(g) {
+        if (g.onKing) { endBlock(); return; }
+        if (g.el < 0.34 && g.dist > 30) { K.hold = null; if (K.state === 'idle' && K.sta > 6) { const big = g.dist > 130; spend(big ? 24 : 13); K.dest = null; attack(K, g.wdir, big ? BASH2 : BASH); } }
+        else if (!g.holding && g.dist < 14) K.dest = [g.wx, g.wy];
+        if (g.holding) K.hold = null;
+      },
+      onSwing(s) { if (!s.push) return; for (const b of PR) { const dx = b.x - K.x, dy = b.y - K.y; if (Math.hypot(dx, dy) < s.reach + 0.4 && adiff(Math.atan2(dy, dx), K.face) < s.arc / 2) { b.vx += Math.cos(K.face) * (s.push + 3); b.vy += Math.sin(K.face) * (s.push + 3); sfx('hit'); dust(b.x, b.y, 4); } } },
+      update(dt) {
+        const slam = (o, s, label, extra) => { o.slamT = 0.3; if (hit(o, { x: o.x + o.kx, y: o.y + o.ky, team: 0, byK: true }, { dmg: s * 2.6 + (extra || 0), pd: s * 8 }) && label) pop(o, label, 'good'); dust(o.x, o.y, 5); };
+        for (const o of F) {
+          if (o.team !== 1 || !o.alive) continue; o.slamT = (o.slamT || 0) - dt; const s = Math.hypot(o.kx, o.ky); if (s < 3.2 || o.slamT > 0) continue;
+          let done = false;
+          for (const ob of obst) { const dx = o.x - ob.x, dy = o.y - ob.y, d = Math.hypot(dx, dy) || 1; if (d < o.r + ob.r + 0.1 && o.kx * dx + o.ky * dy < 0) { slam(o, s, ob.fire ? 'BURNED' : 'SLAM', ob.fire ? 14 : 0); const dot = (o.kx * dx + o.ky * dy) / d; o.kx = (o.kx - 1.6 * dot * dx / d) * 0.45; o.ky = (o.ky - 1.6 * dot * dy / d) * 0.45; done = true; break; } }
+          if (done) continue;
+          const rx = o.x - C.x, ry = o.y - C.y, rd = Math.hypot(rx, ry); if (rd > C.R + 1.2 && o.kx * rx + o.ky * ry > 0) { slam(o, s, 'INTO THE TREES'); o.kx *= -0.3; o.ky *= -0.3; continue; }
+          for (const b of F) if (b !== o && b.team === 1 && b.alive && Math.hypot(b.x - o.x, b.y - o.y) < o.r + b.r + 0.12 && o.kx * (b.x - o.x) + o.ky * (b.y - o.y) > 0) { const m = b.kind === 'brute' ? 2.4 : 1; slam(b, s * 0.7, 'KNOCK-ON'); slam(o, s * 0.4); b.kx += o.kx * 0.65 / m; b.ky += o.ky * 0.65 / m; b.slamT = 0.25; o.kx *= 0.35; o.ky *= 0.35; break; }
+        }
+        for (const b of PR) {
+          const k = Math.pow(0.3, dt), sp = Math.hypot(b.vx, b.vy); b.x += b.vx * dt; b.y += b.vy * dt; b.vx *= k; b.vy *= k; b.rot += sp * dt * 6;
+          for (const ob of obst) { const dx = b.x - ob.x, dy = b.y - ob.y, d = Math.hypot(dx, dy) || 1; if (d < b.r + ob.r) { b.x = ob.x + dx / d * (b.r + ob.r); b.y = ob.y + dy / d * (b.r + ob.r); const dot = (b.vx * dx + b.vy * dy) / d; if (dot < 0) { b.vx -= 1.7 * dot * dx / d; b.vy -= 1.7 * dot * dy / d; if (sp > 3) sfx('block'); } } }
+          const rx = b.x - C.x, ry = b.y - C.y, rd = Math.hypot(rx, ry); if (rd > C.R + 0.6) { b.x = C.x + rx / rd * (C.R + 0.6); b.y = C.y + ry / rd * (C.R + 0.6); const dot = (b.vx * rx + b.vy * ry) / rd; if (dot > 0) { b.vx -= 1.7 * dot * rx / rd; b.vy -= 1.7 * dot * ry / rd; } }
+          for (const o of F) { if (!o.alive) continue; const dx = b.x - o.x, dy = b.y - o.y, d = Math.hypot(dx, dy) || 1; if (d > b.r + o.r) continue;
+            if (o.team === 1 && sp > 2.5 && (b.hitAt.get(o) || -9) < time - 0.5) { b.hitAt.set(o, time); const m = o.kind === 'brute' ? 2.4 : 1; if (hit(o, { x: b.x - b.vx, y: b.y - b.vy, team: 0, byK: true }, { dmg: sp * 3.4, pd: 45 })) pop(o, 'BARREL', 'good'); o.kx += b.vx * 0.7 / m; o.ky += b.vy * 0.7 / m; b.vx *= 0.6; b.vy *= 0.6; }
+            else { b.x = o.x + dx / d * (b.r + o.r); b.y = o.y + dy / d * (b.r + o.r); if (sp < 2.5) { b.vx += dx / d * 6 * dt; b.vy += dy / d * 6 * dt; } } }
+        }
+      },
+      sprites() { return PR.map(b => ({ k: b.x + b.y, draw() { const cx = Math.round(E.sx(b.x, b.y)), by = Math.round(E.sy(b.x, b.y, 0)), d0 = b.x + b.y + 0.1, sh = Math.floor(b.rot) % 3; for (let dy = -2; dy <= 2; dy++) for (let dx = -8; dx <= 8; dx++) if (dx * dx / 64 + dy * dy / 5 < 1) E.dark(cx + dx, by + dy, d0 - 0.05, 0.65); for (let r = 0; r < 17; r++) { const w = r < 2 || r > 14 ? 5 : r < 4 || r > 12 ? 6 : 7; for (let x = -w; x < w; x++) { let c = (r === 3 || r === 8 || r === 13) ? (x < -2 ? 0x8a8e98 : 0x4a4a54) : ((x + 20 + sh) % 3 === 0 ? 0x5e4028 : x < -3 ? 0xa87c50 : x > 3 ? 0x6a4a2e : 0x8a623e); if (r > 14) c = r === 16 ? 0x74543a : 0x9a7650; E.px(cx + x, by - r, d0 + r / 40, c); } } } })); },
+    },
   };
   /* ---- time-stop tactics: the swipe scheme, but the world only moves when the king does ---- */
   MODES.still = Object.assign({}, MODES.swipe, { id: 'still', name: 'Time holds', tokens: 3, extra: 1, title: 'Time moves only when you do',
@@ -454,7 +518,7 @@
         else if (f.st <= 0) { if (f.state === 'stag') f.poise = f.spec.poise; f.state = 'idle'; }
       }
       // integrate, collide
-      const kb = Math.pow(0.0008, dt); f.x += (f.mx + f.kx) * dt; f.y += (f.my + f.ky) * dt; f.kx *= kb; f.ky *= kb;
+      const kb = Math.pow(mode.slide && f !== K ? mode.slide : 0.0008, dt); f.x += (f.mx + f.kx) * dt; f.y += (f.my + f.ky) * dt; f.kx *= kb; f.ky *= kb;
       for (const o of obst) { const dx = f.x - o.x, dy = f.y - o.y, d = Math.hypot(dx, dy), m = o.r + f.r; if (d < m && d > 1e-4) { f.x = o.x + dx / d * m; f.y = o.y + dy / d * m; } }
       const lim = f.team === 0 ? C.R : C.R + 1.6, cd = Math.hypot(f.x - C.x, f.y - C.y); if (cd > lim) { f.x = C.x + (f.x - C.x) / cd * lim; f.y = C.y + (f.y - C.y) / cd * lim; }
       const sp = Math.hypot(f.mx, f.my); f.p.moving = sp > 0.25 && f.state === 'idle'; if (f.p.moving) f.p.phase += dt * sp * 2.7;
@@ -543,7 +607,8 @@
       const t = K.hold || K.dest; if (t && K.state === 'idle') sector(t[0], t[1], 0, 0.28, 7, 0xffe27a, 0.5, 0.08);
     }
     if (mode.draw && !over) mode.draw();
-    for (const f of F.slice().sort((a, b) => (a.x + a.y) - (b.x + b.y))) drawFighter(f);
+    const DL = F.map(f => ({ k: f.x + f.y, f })); if (mode.sprites && !over) for (const e of mode.sprites()) DL.push(e);
+    DL.sort((a, b) => a.k - b.k); for (const e of DL) { if (e.f) drawFighter(e.f); else e.draw(); }
     if (mode.drawTop && !over) mode.drawTop();
     for (const s of shots) { const x0 = Math.round(E.sx(s.x, s.y)), y0 = Math.round(E.sy(s.x, s.y, 0.9)), x1 = Math.round(E.sx(s.x - s.vx * 0.045, s.y - s.vy * 0.045)), y1 = Math.round(E.sy(s.x - s.vx * 0.045, s.y - s.vy * 0.045, 0.9)); sline(x1, y1, x0, y0, s.x + s.y + 1, 0xd8c8a0, 0, 1); E.px(x0, y0, s.x + s.y + 1, 0xe4e8f0); E.dark(Math.round(E.sx(s.x, s.y)), Math.round(E.sy(s.x, s.y, 0)), s.x + s.y, 0.6); }
     for (const e of fx) {

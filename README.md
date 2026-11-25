@@ -42,4 +42,5 @@ One forest clearing, waves of bandits, archers and brutes, and four switchable c
 release to dash through a line of enemies), plus five genre experiments: **Momentum** (speed is the
 weapon), **Hammer throw** (a bouncing, recallable hammer), **Horde** (weapons work on their own, you
 only move), **War drum** (strike on the beat) and **Time holds** (the world moves only when the king
-does). All logic is in `hd/js/combat.js`.
+does), and two physics prototypes: **Ball & chain** (a rope-simulated iron ball) and **Shield bash**
+(shove bodies into rocks, trees, the fire, barrels and each other). All logic is in `hd/js/combat.js`.
