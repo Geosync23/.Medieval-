@@ -73,7 +73,7 @@
     if (kind === 'swing') noise(0.09, 0.12, 1800); else if (kind === 'hit') { tone('triangle', 150, 50, 0.12, 0.3); noise(0.05, 0.12, 600); }
     else if (kind === 'block') tone('square', 760, 520, 0.07, 0.1); else if (kind === 'parry') { tone('square', 1500, 1900, 0.16, 0.1); }
     else if (kind === 'hurt') tone('sawtooth', 200, 70, 0.18, 0.18); else if (kind === 'die') tone('sawtooth', 160, 40, 0.35, 0.16);
-    else if (kind === 'bow') tone('triangle', 600, 200, 0.08, 0.12); else if (kind === 'dash') noise(0.18, 0.16, 900); else if (kind === 'wave') tone('triangle', 330, 660, 0.3, 0.14);
+    else if (kind === 'bow') tone('triangle', 600, 200, 0.08, 0.12); else if (kind === 'dash') noise(0.18, 0.16, 900); else if (kind === 'wave') tone('triangle', 330, 660, 0.3, 0.14); else if (kind === 'drum') tone('sine', 120, 55, 0.13, 0.3); else if (kind === 'drum2') tone('sine', 170, 80, 0.1, 0.22);
   }
 
   /* ================= fighters ================= */
@@ -81,6 +81,7 @@
     king: { hp: 100, speed: 2.7, poise: 60, r: 0.34 },
     knight: { hp: 95, speed: 2.5, poise: 80, r: 0.34, atk: { wind: 0.34, reach: 1.35, arc: 1.5, dmg: 13, pd: 18, rec: 0.5, cd: 1.25 } },
     bandit: { hp: 52, speed: 2.05, poise: 42, r: 0.34, atk: { wind: 0.5, reach: 1.15, arc: 1.5, dmg: 11, pd: 16, rec: 0.55, cd: 1.5 } },
+    rabble: { hp: 26, speed: 2.3, poise: 20, r: 0.3, atk: { wind: 0.45, reach: 1.05, arc: 1.5, dmg: 6, pd: 10, rec: 0.5, cd: 1.3 } },
     archer: { hp: 34, speed: 2.1, poise: 30, r: 0.32, shot: { aim: 0.9, cd: 3.0, dmg: 10 } },
     brute: { hp: 150, speed: 1.5, poise: 130, r: 0.46, scale: 1.35, atk: { wind: 0.95, reach: 1.65, arc: 2.3, dmg: 26, pd: 46, rec: 0.9, cd: 2.5, heavy: true } },
   };
@@ -90,7 +91,7 @@
     const p = { role: 'villager', x: 0, y: 0, fx: 1, fy: 1, moving: false, phase: rnd() * 4, skin: SKIN[(rnd() * 4) | 0], hair: 0x3a2a20, top: 0x5a3a2e, bot: 0x3a3a4a, fem: false, hat: 0, hatc: 0x2e2e36, apron: false, child: false, sit: false, z: 0, bubble: 0, name: kind };
     if (kind === 'king') { p.role = 'king'; p.skin = SKIN[0]; p.hair = 0x5a3a24; }
     else if (kind === 'knight') { p.role = 'guard'; p.name = NAMES[i % 3]; }
-    else if (kind === 'bandit') { p.top = [0x5a3a2e, 0x4a4a3a, 0x6a2e2e, 0x3e4a56][(rnd() * 4) | 0]; p.hat = 3; p.hatc = [0x2e2e36, 0x4a3a2e, 0x3a4a3a][(rnd() * 3) | 0] & ~1; p.hair = rnd() < 0.5 ? 0x3a2a21 : 0x2a2428; p.bot = 0x2e2e36; }
+    else if (kind === 'bandit' || kind === 'rabble') { p.top = [0x5a3a2e, 0x4a4a3a, 0x6a2e2e, 0x3e4a56][(rnd() * 4) | 0]; p.hat = 3; p.hatc = [0x2e2e36, 0x4a3a2e, 0x3a4a3a][(rnd() * 3) | 0] & ~1; p.hair = rnd() < 0.5 ? 0x3a2a21 : 0x2a2428; p.bot = 0x2e2e36; }
     else if (kind === 'archer') { p.top = 0x4a6a3a; p.hat = 2; p.hatc = 0x3a5a2e; p.hair = 0x8a5a2c; p.bot = 0x4a3a2e; }
     else if (kind === 'brute') { p.top = 0x6a4a36; p.hair = 0x2a2429; p.bot = 0x4a3a2e | 2; p.scale = 1.35; p.skin = SKIN[2]; }
     return p;
@@ -105,14 +106,15 @@
     let list = []; for (const [k, n] of def) for (let i = 0; i < n; i++) list.push(k);
     for (let i = 0; i < extra + (mode.extra || 0); i++) list.push('bandit');
     if (mode.noArchers) list = list.map(k => k === 'archer' ? 'bandit' : k);
+    if (mode.horde) { list = []; for (let i = 0; i < 12 + wave * 5; i++) list.push('rabble'); if (wave % 3 === 2) list.push('brute'); }
     const a0 = 2.2 + rnd() * 2.2;
-    list.forEach((k, i) => { const a = a0 + (i - list.length / 2) * 0.32, e = mk(k, C.x + Math.cos(a) * (C.R + 1.2), C.y + Math.sin(a) * (C.R + 1.2), 1, i); F.push(e); });
+    list.forEach((k, i) => { const a = mode.horde ? rnd() * TAU : a0 + (i - list.length / 2) * 0.32, e = mk(k, C.x + Math.cos(a) * (C.R + 1.2), C.y + Math.sin(a) * (C.R + 1.2), 1, i); F.push(e); });
     wave++; $('wave').textContent = 'Wave ' + wave + '   ·   felled ' + kills; say('Wave ' + wave, '', 1300); sfx('wave');
   }
   function reset() {
     F = []; shots = []; fx = []; decals = []; wave = 0; waveT = 1.2; over = false; kills = 0; slow = 1; hitStop = 0; $('pops').innerHTML = '';
     K = mk('king', C.x + 1.5, C.y + 2.5, 0); K.sta = 100; K.staD = 0; K.combo = 0; K.comboT = 9; K.dest = null; K.hold = null; K.buf = null; K.lock = null; K.focus = null; K.planted = 0; K.stance = 0;
-    F.push(K);
+    F.push(K); K.noWeapon = false; if (mode.init) mode.init();
     if (mode.knights) for (let i = 0; i < 3; i++) { const a = -2.3 + (i - 1) * 0.9, k = mk('knight', K.x + Math.cos(a) * 1.5, K.y + Math.sin(a) * 1.5, 0, i); k.slot = i; F.push(k); }
     $('bal').style.display = mode.id === 'duel' ? 'block' : 'none'; $('wave').textContent = ''; allies();
     $('msg').classList.remove('on');
@@ -159,11 +161,12 @@
     let dmg = spec.dmg * (mult || 1), pd = spec.pd || 10, fin = false;
     if (o.state === 'stag') { dmg *= mode.finisher || 1.6; fin = true; }
     if (mode.id === 'duel') { if (o === K) { pd *= K.stance > 0 ? 1.4 : K.stance < 0 ? 0.5 : 1; dmg *= K.stance < 0 ? 0.6 : 1; } else if (f === K && K.stance > 0) pd *= 1.7; }
+    if (o === K && mode.id === 'moment') dmg *= 1 - 0.5 * mode.meter();     // a fast king is a glancing target
     dmg = Math.round(dmg * (0.9 + rnd() * 0.2));
     o.hp -= dmg; o.flash = 1; o.poise -= pd; o.kx -= Math.cos(from) * (fin ? 5 : 2.4); o.ky -= Math.sin(from) * (fin ? 5 : 2.4);
-    pop(o, fin && f === K ? 'FINISHER ' + dmg : '' + dmg, o.team === 0 ? 'hurt' : fin ? 'good' : '');
+    pop(o, fin && (f === K || f.byK) ? 'FINISHER ' + dmg : '' + dmg, o.team === 0 ? 'hurt' : fin ? 'good' : '');
     sparks(o.x, o.y, 0.9, o.team === 0 ? 0xff6a5a : 0xffe9a0, fin ? 14 : 7); sfx(o === K ? 'hurt' : 'hit');
-    if (f === K || o === K) { shake = Math.max(shake, o === K ? 5 : fin ? 6 : 2.5); if (f === K) hitStop = Math.max(hitStop, fin ? 0.13 : 0.05); }
+    if (f === K || f.byK || o === K) { shake = Math.max(shake, o === K ? 5 : fin ? 6 : 2.5); if (f === K || f.byK) hitStop = Math.max(hitStop, fin ? 0.13 : 0.05); }
     if (o.kind === 'knight') allies();
     if (o.hp <= 0) die(o, f);
     else if (o.poise <= 0 && o.state !== 'stag') { stagger(o, o.kind === 'brute' ? 1.2 : o === K ? 1.0 : 1.6); if (mode.id === 'duel') pop(o, 'OFF BALANCE', o === K ? 'hurt' : 'good'); }
@@ -218,6 +221,7 @@
   /* ---------- the king, per control scheme ---------- */
   const CUT = { wind: 0.1, reach: 1.3, arc: 1.9, dmg: 13, pd: 14, rec: 0.2, lunge: 0.35, sta: 11 }, LUNGE = { wind: 0.22, reach: 1.5, arc: 1.1, dmg: 28, pd: 34, rec: 0.42, lunge: 1.7, sta: 24 },
     FINISH = { wind: 0.16, reach: 1.5, arc: 2.7, dmg: 22, pd: 40, rec: 0.38, lunge: 0.5, sta: 14 }, AUTO = { wind: 0.16, reach: 1.3, arc: 1.9, dmg: 15, pd: 16, rec: 0.3, lunge: 0.2 }, DUEL = { wind: 0.2, reach: 1.3, arc: 1.6, dmg: 9, pd: 20, rec: 0.3, lunge: 0.15 };
+  const JAB = { wind: 0.1, reach: 1.25, arc: 1.6, dmg: 7, pd: 8, rec: 0.25 }, BEAT = 0.6; let HM = { out: false }, HD = null, RH = null;
   const spend = c => { K.sta -= c; K.staD = 0.55; };
   function nearestEnemy(x, y, max, dir, cone) { let b = null, bd = max; for (const o of F) if (o.team === 1 && o.alive) { const d = Math.hypot(o.x - x, o.y - y); if (d < bd && (dir === undefined || adiff(Math.atan2(o.y - y, o.x - x), dir) < cone)) { bd = d; b = o; } } return b; }
   function kingSwing(dir, heavy) {
@@ -300,7 +304,109 @@
       },
       update(dt) { if (K.autoBlock > 0) { K.autoBlock -= dt; if (K.autoBlock <= 0) endBlock(); } },
     },
+    /* ---- kinetic ARPG: speed is the weapon ---- */
+    moment: {
+      id: 'moment', name: 'Momentum', tokens: 3, extra: 1, title: 'Speed is your weapon',
+      help: ['<b>Hold</b> and the king runs toward your finger, building speed; he keeps his momentum and turns in arcs', 'He <b>cuts down anyone he runs past</b>. The faster he is going, the harder the blow (yellow bar)', 'Men he hits are flung back and <b>bowl over</b> the men behind them', 'Sharp turns and taking a hit bleed speed; let go to coast to a stop', '<b>Tap</b> for a quick jab when you are caught standing'],
+      init() { K.vel = [0, 0]; K.hitAt = new Map(); K.lastHp = K.hp; },
+      down(g) { K.hold = [g.wx, g.wy]; }, move(g) { K.hold = [g.wx, g.wy]; },
+      up(g) { K.hold = null; if (g.el < 0.22 && g.dist < 14 && K.state === 'idle') { const o = nearestEnemy(K.x, K.y, 1.7); if (o) attack(K, Math.atan2(o.y - K.y, o.x - K.x), JAB); } },
+      kmove(dt) {
+        const v = K.vel, MAX = 6.6; let sp = Math.hypot(v[0], v[1]);
+        if (K.state !== 'idle') { const k = Math.pow(0.02, dt); v[0] *= k; v[1] *= k; }
+        else if (K.hold) { const dx = K.hold[0] - K.x, dy = K.hold[1] - K.y, d = Math.hypot(dx, dy) || 1; if (d > 0.3) { const ax = dx / d, ay = dy / d; if (sp > 0.5 && (v[0] * ax + v[1] * ay) / sp < 0.3) { const k = Math.pow(0.08, dt); v[0] *= k; v[1] *= k; } v[0] += ax * 10 * dt; v[1] += ay * 10 * dt; } }
+        else { const k = Math.pow(0.12, dt); v[0] *= k; v[1] *= k; }
+        sp = Math.hypot(v[0], v[1]); if (sp > MAX) { v[0] *= MAX / sp; v[1] *= MAX / sp; }
+        const rx = K.x - C.x, ry = K.y - C.y, rd = Math.hypot(rx, ry); if (rd > C.R - 0.05) { const out = (v[0] * rx + v[1] * ry) / rd; if (out > 0) { v[0] -= out * rx / rd; v[1] -= out * ry / rd; } }
+        K.mx = v[0]; K.my = v[1]; if (sp > 0.4 && K.state === 'idle') K.face = Math.atan2(v[1], v[0]);
+      },
+      update(dt) {
+        const v = K.vel, sp = Math.hypot(v[0], v[1]);
+        if (K.hp < K.lastHp) { v[0] *= 0.3; v[1] *= 0.3; } K.lastHp = K.hp;
+        if (sp > 2.4 && K.state === 'idle') for (const o of F) if (o.team === 1 && o.alive) {
+          const dx = o.x - K.x, dy = o.y - K.y, d = Math.hypot(dx, dy);
+          if (d < 0.95 + o.r && dx * v[0] + dy * v[1] > 0 && (K.hitAt.get(o) || -9) < time - 0.55) {
+            K.hitAt.set(o, time); const pw = sp / 6.6;
+            if (hit(o, K, { dmg: 6 + 30 * pw * pw, pd: 12 + 50 * pw })) { o.kx += v[0] * 0.9; o.ky += v[1] * 0.9; o.thrown = 0.45; }
+            fx.push({ k: 'sw', x: K.x, y: K.y, face: K.face, reach: 1.25, arc: 2.2, t: 0, life: 0.18, col: 0xffffff }); sfx('swing'); v[0] *= 0.86; v[1] *= 0.86; K.swingT = 0;
+          }
+        }
+        for (const a of F) if (a.thrown > 0) { a.thrown -= dt; if (Math.hypot(a.kx, a.ky) > 2.5) for (const b of F) if (b !== a && b.team === 1 && b.alive && a.alive && !(b.thrown > 0) && Math.hypot(a.x - b.x, a.y - b.y) < a.r + b.r + 0.15) { hit(b, { x: a.x, y: a.y, team: 0, byK: true }, { dmg: 8, pd: 30 }); b.kx += a.kx * 0.6; b.ky += a.ky * 0.6; b.thrown = 0.3; a.thrown = 0; break; } }
+        if (sp > 4.5 && rnd() < 0.6) dust(K.x, K.y, 1);
+      },
+      meter() { return Math.hypot(K.vel[0], K.vel[1]) / 6.6; },
+    },
+    /* ---- kinetic: a thrown hammer that bounces and comes back ---- */
+    hammer: {
+      id: 'hammer', name: 'Hammer throw', tokens: 2, title: 'Throw it, call it back',
+      help: ['<b>Hold the ground</b> to walk, tap to walk to a spot', '<b>Swipe</b> to hurl the hammer; it bounces off rocks and the tree line and strikes everyone it touches', 'It lands and lies there. <b>Tap anywhere</b> to call it back: it hits everything between it and you', 'Catching it sends out a small shockwave', 'While it is out you are unarmed: <b>swipe</b> rolls instead'],
+      init() { HM = { out: false }; },
+      down() { }, move(g) { if (g.el > 0.17) { g.holding = true; K.hold = [g.wx, g.wy]; K.dest = null; } },
+      up(g) {
+        if (g.el < 0.34 && g.dist > 30) { K.hold = null; if (!HM.out && K.state === 'idle' && K.sta > 6) { spend(9); HM = { out: true, x: K.x, y: K.y, vx: Math.cos(g.wdir) * 13, vy: Math.sin(g.wdir) * 13, spin: 0, ret: false, land: false, seen: new Set() }; K.noWeapon = true; K.face = g.wdir; K.swingT = 0; sfx('swing'); } else if (HM.out) dodge(g.wdir, 1.9, 16); }
+        else if (!g.holding && g.dist < 14) { if (HM.out && !HM.ret) { HM.ret = true; HM.land = false; HM.seen = new Set(); sfx('dash'); } else if (!HM.out) K.dest = [g.wx, g.wy]; }
+        if (g.holding) K.hold = null;
+      },
+      update(dt) {
+        const h = HM; if (!h.out) return; h.spin += dt * 20;
+        if (h.ret) { const dx = K.x - h.x, dy = K.y - h.y, d = Math.hypot(dx, dy) || 1; if (d < 0.6) { h.out = false; K.noWeapon = false; K.swingT = 0; sfx('block'); sparks(K.x, K.y, 0.9, 0xffe9a0, 10, 3); fx.push({ k: 'sw', x: K.x, y: K.y, face: 0, reach: 1.3, arc: 6.2, t: 0, life: 0.22, col: 0xffe9a0 }); for (const o of F) if (o.team === 1 && o.alive && Math.hypot(o.x - K.x, o.y - K.y) < 1.35 + o.r) hit(o, K, { dmg: 8, pd: 26 }); return; } h.vx = dx / d * 15; h.vy = dy / d * 15; }
+        else if (!h.land) { const k = Math.pow(0.4, dt); h.vx *= k; h.vy *= k; if (Math.hypot(h.vx, h.vy) < 3.4) { h.land = true; h.vx = h.vy = 0; dust(h.x, h.y, 6); } }
+        h.x += h.vx * dt; h.y += h.vy * dt; if (h.land) return;
+        if (!h.ret) {
+          for (const o of obst) { const dx = h.x - o.x, dy = h.y - o.y, d = Math.hypot(dx, dy) || 1; if (d < o.r + 0.18) { const dot = (h.vx * dx + h.vy * dy) / d; if (dot < 0) { h.vx -= 2 * dot * dx / d; h.vy -= 2 * dot * dy / d; h.seen = new Set(); sparks(h.x, h.y, 0.6, 0xd8dce4, 5); sfx('block'); } } }
+          const rx = h.x - C.x, ry = h.y - C.y, rd = Math.hypot(rx, ry); if (rd > C.R + 0.4) { const dot = (h.vx * rx + h.vy * ry) / rd; if (dot > 0) { h.vx -= 2 * dot * rx / rd; h.vy -= 2 * dot * ry / rd; h.seen = new Set(); sfx('block'); } }
+        }
+        for (const o of F) if (o.team === 1 && o.alive && !h.seen.has(o) && Math.hypot(o.x - h.x, o.y - h.y) < o.r + 0.38) { h.seen.add(o); hit(o, { x: h.x - h.vx * 0.1, y: h.y - h.vy * 0.1, team: 0, byK: true }, { dmg: h.ret ? 20 : 16, pd: 30 }); if (!h.ret) { h.vx *= 0.8; h.vy *= 0.8; } }
+      },
+      drawTop() {
+        const h = HM; if (!h.out) return; const z = h.land ? 0.12 : 0.8, cx = Math.round(E.sx(h.x, h.y)), cy = Math.round(E.sy(h.x, h.y, z)), d = h.x + h.y + z + 0.6, a = h.land ? 0.5 : h.spin;
+        for (let i = -2; i <= 2; i++) E.dark(Math.round(E.sx(h.x, h.y)) + i, Math.round(E.sy(h.x, h.y, 0)), h.x + h.y + 0.02, 0.6);
+        const ex = cx + Math.cos(a) * 8, ey = cy - Math.sin(a) * 8; sline(cx - Math.cos(a) * 6, cy + Math.sin(a) * 6, ex, ey, d, 0x7a5636, 0x5a3e28, 2); rectS(Math.round(ex) - 3, Math.round(ey) - 3, 6, 6, d, 0x6a707c); rectS(Math.round(ex) - 2, Math.round(ey) - 2, 3, 3, d, 0xc8ced8);
+        if (h.land) sector(h.x, h.y, 0, 0.45 + 0.1 * Math.sin(time * 6), 7, 0xffe27a, 0.6, 0.1); if (h.ret) gline(h.x, h.y, K.x, K.y, 0xffe27a, true);
+      },
+    },
+    /* ---- survivors-like: weapons work on their own, you only move ---- */
+    horde: {
+      id: 'horde', name: 'Horde', tokens: 99, horde: true, title: 'Just keep moving',
+      help: ['<b>Hold</b> to move; that is nearly all you do', 'Blades <b>circle the king</b> and cut anyone they touch; he also sweeps around himself every moment or so', 'A large rabble pours in from every side', 'Each few kills <b>levels him up</b> (yellow bar) with a random boon: more blades, wider orbit, faster sweep…', '<b>Flick</b> to dash out of a tight spot'],
+      init() { HD = { blades: 2, rad: 1.25, spd: 3.6, sweep: 1.3, t: 1, xp: 0, need: 5, k0: 0, hitAt: new Map(), ang: 0 }; },
+      down(g) { K.hold = [g.wx, g.wy]; }, move(g) { K.hold = [g.wx, g.wy]; }, up(g) { K.hold = null; if (g.el < 0.3 && g.dist > 40) dodge(g.wdir, 2.1, 18); },
+      update(dt) {
+        const h = HD; h.ang += dt * h.spd;
+        for (let i = 0; i < h.blades; i++) { const a = h.ang + i * TAU / h.blades, bx = K.x + Math.cos(a) * h.rad, by = K.y + Math.sin(a) * h.rad; for (const o of F) if (o.team === 1 && o.alive && Math.hypot(o.x - bx, o.y - by) < o.r + 0.32 && (h.hitAt.get(o) || -9) < time - 0.4) { h.hitAt.set(o, time); hit(o, { x: K.x, y: K.y, team: 0 }, { dmg: 7, pd: 10 }); } }
+        h.t -= dt; if (h.t <= 0 && nearestEnemy(K.x, K.y, 1.9)) { h.t = h.sweep; K.swingT = 0; sfx('swing'); fx.push({ k: 'sw', x: K.x, y: K.y, face: K.face, reach: 1.55, arc: 6.2, t: 0, life: 0.22, col: 0xffffff }); for (const o of F) if (o.team === 1 && o.alive && Math.hypot(o.x - K.x, o.y - K.y) < 1.55 + o.r) hit(o, K, { dmg: 11, pd: 16 }); }
+        if (kills > h.k0) { h.xp += kills - h.k0; h.k0 = kills; while (h.xp >= h.need) { h.xp -= h.need; h.need = Math.round(h.need * 1.3) + 1; const u = [['Another blade', () => { h.blades = Math.min(7, h.blades + 1); }], ['Wider orbit', () => { h.rad += 0.28; }], ['Faster sweep', () => { h.sweep *= 0.78; }], ['Hearty', () => { K.max += 20; K.hp = Math.min(K.max, K.hp + 35); }], ['Faster blades', () => { h.spd *= 1.22; }]][(rnd() * 5) | 0]; u[1](); pop(K, 'LEVEL UP: ' + u[0], 'good'); sfx('wave'); } }
+      },
+      meter() { return HD.xp / HD.need; },
+      drawTop() { const h = HD; for (let i = 0; i < h.blades; i++) { const a = h.ang + i * TAU / h.blades, x = K.x + Math.cos(a) * h.rad, y = K.y + Math.sin(a) * h.rad, cx = Math.round(E.sx(x, y)), cy = Math.round(E.sy(x, y, 0.7)), tx = Math.round(E.sx(x - Math.sin(a) * 0.45, y + Math.cos(a) * 0.45)), ty = Math.round(E.sy(x - Math.sin(a) * 0.45, y + Math.cos(a) * 0.45, 0.7)), d = x + y + 1.2; sline(cx * 2 - tx, cy * 2 - ty, tx, ty, d, 0xf4f6fa, 0xa8aebc, 3); rectS(cx - 2, cy - 2, 4, 4, d, 0xe8c84a); for (let k = 1; k < 5; k++) { const ta = a - k * 0.14, qx = K.x + Math.cos(ta) * h.rad, qy = K.y + Math.sin(ta) * h.rad; E.px(Math.round(E.sx(qx, qy)), Math.round(E.sy(qx, qy, 0.7)), d - 0.2, k < 3 ? 0xe8e4d8 : 0xa8a498); } E.dark(Math.round(E.sx(x, y)), Math.round(E.sy(x, y, 0)), x + y + 0.02, 0.6); } },
+    },
+    /* ---- rhythm: strike on the drum beat ---- */
+    drum: {
+      id: 'drum', name: 'War drum', tokens: 2, title: 'Strike on the beat',
+      help: ['A war drum beats; a ring closes on the king with each beat', '<b>Tap on the beat</b> and he leaps to the nearest enemy (or the one you tap) and strikes', 'Every hit in time raises the <b>chain</b> (yellow bar) and the damage; off the beat it breaks', 'He cannot be hit mid-leap, so staying in time keeps him safe', '<b>Swipe</b> to sidestep (free on the beat), <b>hold</b> to walk'],
+      init() { RH = { t: 0, combo: 0, idle: 0 }; },
+      down() { }, move(g) { if (g.el > 0.2) { g.holding = true; K.hold = [g.wx, g.wy]; K.dest = null; } },
+      up(g) {
+        if (g.holding) { K.hold = null; return; }
+        const ph = RH.t % BEAT, err = Math.min(ph, BEAT - ph), q = err < 0.09 ? 2 : err < 0.17 ? 1 : 0;
+        if (g.dist > 30) { if (q) { K.sta = Math.max(K.sta, 20); dodge(g.wdir, 1.9, 0); } else dodge(g.wdir, 1.6, 22); return; }
+        if (K.state !== 'idle' && K.state !== 'rec') return;
+        let o = enemyAt(g.lx, g.ly); if (!o || Math.hypot(o.x - K.x, o.y - K.y) > 4.8) o = nearestEnemy(K.x, K.y, 4.8);
+        if (!q) { RH.combo = 0; pop(K, 'off beat', 'hurt'); if (o && K.state === 'idle' && Math.hypot(o.x - K.x, o.y - K.y) < 1.6) attack(K, Math.atan2(o.y - K.y, o.x - K.x), JAB); return; }
+        if (!o) return;
+        RH.combo = Math.min(8, RH.combo + 1); RH.idle = 0; pop(K, (q === 2 ? 'PERFECT' : 'good') + ' x' + RH.combo, 'good');
+        const d = Math.hypot(o.x - K.x, o.y - K.y); K.state = 'idle';
+        roll(K, Math.atan2(o.y - K.y, o.x - K.x), Math.max(0.25, d - 0.7), 0.12, 0.32, { dmg: (q === 2 ? 14 : 10) * (1 + 0.2 * (RH.combo - 1)), pd: 24, rec: 0.1 });
+      },
+      update(dt) { const b0 = Math.floor(RH.t / BEAT); RH.t += dt; const b1 = Math.floor(RH.t / BEAT); if (b1 !== b0) { sfx(b1 % 4 === 0 ? 'drum' : 'drum2'); if (++RH.idle > 3) RH.combo = 0; } },
+      draw() { const p = (RH.t % BEAT) / BEAT, hot = p < 0.15 || p > 0.85; sector(K.x, K.y, 0, 0.75, 7, hot ? 0xffe27a : 0xb8a888, hot ? 0.8 : 0.4, 0.1); sector(K.x, K.y, 0, 0.75 + (1 - p) * 1.5, 7, 0xffffff, 0.25 + 0.4 * p, 0.08); },
+      meter() { return RH.combo / 8; },
+    },
   };
+  /* ---- time-stop tactics: the swipe scheme, but the world only moves when the king does ---- */
+  MODES.still = Object.assign({}, MODES.swipe, { id: 'still', name: 'Time holds', tokens: 3, extra: 1, title: 'Time moves only when you do',
+    help: ['The world <b>freezes whenever the king is idle</b>, so you can read the fight and choose', 'Controls are the Swipe scheme: <b>hold</b> to walk, <b>swipe</b> to cut, long swipe to lunge, <b>hold the king</b> to block, swipe from him to roll', 'Time runs while he walks, swings, blocks or rolls; hold your finger still on the ground to let time pass', 'More bandits come at once, since you have time to think'],
+    ts() { return (K.hold || K.dest || K.state !== 'idle' || K.buf) ? 1 : 0.04; } });
   function enemyAt(lx, ly) { let b = null, bd = 30; for (const o of F) if (o.team === 1 && o.alive) { const d = Math.hypot(o.p.scrX - lx, o.p.scrY - ly); if (d < bd) { bd = d; b = o; } } return b; }
 
   /* ================= simulation ================= */
@@ -325,7 +431,7 @@
     melee.sort((a, b) => (a.tgt ? Math.hypot(a.x - a.tgt.x, a.y - a.tgt.y) : 99) - (b.tgt ? Math.hypot(b.x - b.tgt.x, b.y - b.tgt.y) : 99));
     melee.forEach((e, i) => { e.eng = mode.id === 'duel' ? e === K.lock : (i < mode.tokens || e.state !== 'idle'); });
     if (!over) {
-      kingMove(); if (mode.update) mode.update(dt);
+      if (mode.kmove) mode.kmove(dt); else kingMove(); if (mode.update) mode.update(dt);
       if (mode.id === 'duel' && K.holdStop) K.mx = K.my = 0;
       if (K.buf) { K.buf.t -= dt; if (K.state === 'idle') { const b = K.buf; K.buf = null; kingSwing(b.dir, b.heavy); } else if (K.buf.t <= 0) K.buf = null; }
       K.comboT += dt; K.staD -= dt; if (K.staD <= 0 && K.state !== 'block') K.sta = Math.min(100, K.sta + 26 * dt);
@@ -403,8 +509,8 @@
       else if (f.state === 'block') a = 1.9; else if (f.state === 'stag') a = -0.4; else if (f.state === 'roll' && f.dash) a = 0.1;
       const hx = sx + sg * Math.round(5 * sc), hy = sy - Math.round(13 * sc), L = (f.kind === 'brute' ? 17 : f.kind === 'king' ? 15 : 12) * (f.kind === 'brute' ? 1.1 : 1);
       const ex = hx + sg * Math.cos(a) * L, ey = hy - Math.sin(a) * L;
-      if (f.kind === 'king') { sline(hx, hy, ex, ey, d, 0xe4e8f0, 0xa8aebc, 2); rectS(Math.round(hx + sg * Math.cos(a) * 2 - 1), Math.round(hy - Math.sin(a) * 2 - 1), 3, 3, d, 0xe8c84a); }
-      else if (f.kind === 'brute') { sline(hx, hy, ex, ey, d, 0x7a5636, 0x5a3e28, 3); rectS(Math.round(ex) - 2, Math.round(ey) - 2, 5, 5, d, 0x4a3424); rectS(Math.round(ex) - 1, Math.round(ey) - 1, 2, 2, d, 0x9aa0ac); }
+      if (f === K && K.noWeapon) { } else if (f.kind === 'king' && mode.id !== 'hammer') { sline(hx, hy, ex, ey, d, 0xe4e8f0, 0xa8aebc, 2); rectS(Math.round(hx + sg * Math.cos(a) * 2 - 1), Math.round(hy - Math.sin(a) * 2 - 1), 3, 3, d, 0xe8c84a); }
+      else if (f.kind === 'brute' || f.kind === 'king') { sline(hx, hy, ex, ey, d, 0x7a5636, 0x5a3e28, 3); rectS(Math.round(ex) - 2, Math.round(ey) - 2, 5, 5, d, 0x4a3424); rectS(Math.round(ex) - 1, Math.round(ey) - 1, 2, 2, d, 0x9aa0ac); }
       else { sline(hx, hy, ex, ey, d, 0x8a6a46, 0x6a4c30, 2); rectS(Math.round(hx + sg * Math.cos(a) * (L - 3)) - 1, Math.round(hy - Math.sin(a) * (L - 3)) - 2, 4, 4, d, 0xa8aeb8); }
     } else if (f.kind === 'archer') {
       const bx = sx + sg * 7, by = sy - 15, drawn = f.state === 'aim';
@@ -436,7 +542,9 @@
       if (K.aim && K.aim.pw > 0.02) { const a = K.aim, L = 1.5 + 3.3 * a.pw, ex = K.x + Math.cos(a.dir) * L, ey = K.y + Math.sin(a.dir) * L, px = -Math.sin(a.dir) * 0.8, py = Math.cos(a.dir) * 0.8, c = a.pw > 0.85 ? 0xffe27a : 0xffffff; gline(K.x + px, K.y + py, ex + px, ey + py, c, true); gline(K.x - px, K.y - py, ex - px, ey - py, c, true); sector(ex, ey, 0, 0.5, 7, c, 0.7, 0.1); for (const o of F) if (o.team === 1 && o.alive) { const u = clamp(((o.x - K.x) * Math.cos(a.dir) + (o.y - K.y) * Math.sin(a.dir)) / L, 0, 1); if (Math.hypot(K.x + Math.cos(a.dir) * L * u - o.x, K.y + Math.sin(a.dir) * L * u - o.y) < 0.85 + o.r) sector(o.x, o.y, 0, 0.55, 7, 0xff4a3a, 0.6, 0.12); } }
       const t = K.hold || K.dest; if (t && K.state === 'idle') sector(t[0], t[1], 0, 0.28, 7, 0xffe27a, 0.5, 0.08);
     }
+    if (mode.draw && !over) mode.draw();
     for (const f of F.slice().sort((a, b) => (a.x + a.y) - (b.x + b.y))) drawFighter(f);
+    if (mode.drawTop && !over) mode.drawTop();
     for (const s of shots) { const x0 = Math.round(E.sx(s.x, s.y)), y0 = Math.round(E.sy(s.x, s.y, 0.9)), x1 = Math.round(E.sx(s.x - s.vx * 0.045, s.y - s.vy * 0.045)), y1 = Math.round(E.sy(s.x - s.vx * 0.045, s.y - s.vy * 0.045, 0.9)); sline(x1, y1, x0, y0, s.x + s.y + 1, 0xd8c8a0, 0, 1); E.px(x0, y0, s.x + s.y + 1, 0xe4e8f0); E.dark(Math.round(E.sx(s.x, s.y)), Math.round(E.sy(s.x, s.y, 0)), s.x + s.y, 0.6); }
     for (const e of fx) {
       if (e.k === 'sw') { const pr = e.t / e.life, a0 = e.face - e.arc / 2, n = Math.ceil(e.arc * e.reach * 14); for (let i = 0; i <= n; i++) { const u = i / n; if (u > pr * 1.5 || u < pr * 1.5 - 0.7) continue; const a = a0 + e.arc * u; for (const rr of [0.95, 0.82, 0.7]) { const x = e.x + Math.cos(a) * e.reach * rr, y = e.y + Math.sin(a) * e.reach * rr; E.px(Math.round(E.sx(x, y)), Math.round(E.sy(x, y, 0.7)), x + y + 1.2, rr > 0.9 ? e.col : rr > 0.8 ? 0xe8e4d8 : 0xb8b4a8); } } }
@@ -452,8 +560,8 @@
     octx.putImageData(img, 0, 0, dx0, dy0, dw, dh);
     ctx.fillStyle = '#14111a'; ctx.fillRect(0, 0, cv.width, cv.height); ctx.imageSmoothingEnabled = zoom < 1;
     ctx.drawImage(off, dx0, dy0, dw, dh, Math.round((dx0 - x0) * zoom), Math.round((dy0 - y0) * zoom), dw * zoom, dh * zoom);
-    if (K.aim) { ctx.fillStyle = 'rgba(40,60,120,0.16)'; ctx.fillRect(0, 0, cv.width, cv.height); }
-    $('hp').firstChild.style.width = Math.max(0, K.hp / K.max * 100) + '%'; $('st').firstChild.style.width = clamp(K.sta, 0, 100) + '%'; if (mode.id === 'duel') $('bal').firstChild.style.width = clamp(K.poise / KINDS.king.poise * 100, 0, 100) + '%';
+    if (K.aim || slow < 0.5) { ctx.fillStyle = 'rgba(40,60,120,0.16)'; ctx.fillRect(0, 0, cv.width, cv.height); }
+    $('hp').firstChild.style.width = Math.max(0, K.hp / K.max * 100) + '%'; $('st').firstChild.style.width = clamp(mode.meter ? mode.meter() * 100 : K.sta, 0, 100) + '%'; if (mode.id === 'duel') $('bal').firstChild.style.width = clamp(K.poise / KINDS.king.poise * 100, 0, 100) + '%';
   }
 
   /* ================= input ================= */
@@ -490,6 +598,7 @@
     for (const k in MODES) { const b = document.createElement('button'); b.textContent = MODES[k].name; if (k === id) b.className = 'on'; b.onclick = () => setMode(k); el.appendChild(b); }
     $('help').className = ''; $('help').innerHTML = '<b>' + mode.title + '</b> <i>(tap to hide)</i><ul>' + mode.help.map(h => '<li>' + h + '</li>').join('') + '</ul>';
     try { location.hash = id; } catch (e) { }
+    $('hud').style.top = ($('top').offsetHeight + 2) + 'px';
     reset();
   }
   $('help').onclick = () => $('help').classList.toggle('min');
@@ -501,7 +610,7 @@
   function tick(now) {
     requestAnimationFrame(tick);
     const raw = Math.min(0.05, (now - last) / 1000 || 0.016); last = now;
-    slow += ((K.aim ? 0.28 : 1) - slow) * 0.3;
+    slow += ((K.aim ? 0.28 : mode.ts ? mode.ts() : 1) - slow) * 0.3;
     if (hitStop > 0) hitStop -= raw; else { const dt = raw * slow; sim(dt); }
     draw();
   }

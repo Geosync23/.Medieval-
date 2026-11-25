@@ -39,4 +39,7 @@ One forest clearing, waves of bandits, archers and brutes, and four switchable c
 **Swipe** (hold to move, swipe to strike, hold the king to block, swipe from the king to roll),
 **King's Guard** (the king swings on his own when he stands still; three knights fight beside him),
 **Duel** (one opponent at a time on a balance bar) and **Draw & loose** (pull back from the king and
-release to dash through a line of enemies). All logic is in `hd/js/combat.js`.
+release to dash through a line of enemies), plus five genre experiments: **Momentum** (speed is the
+weapon), **Hammer throw** (a bouncing, recallable hammer), **Horde** (weapons work on their own, you
+only move), **War drum** (strike on the beat) and **Time holds** (the world moves only when the king
+does). All logic is in `hd/js/combat.js`.
