@@ -164,6 +164,7 @@
     if (o === K && mode.id === 'moment') dmg *= 1 - 0.5 * mode.meter();     // a fast king is a glancing target
     dmg = Math.round(dmg * (0.9 + rnd() * 0.2));
     o.hp -= dmg; o.flash = 1; o.poise -= pd; o.kx -= Math.cos(from) * (fin ? 5 : 2.4); o.ky -= Math.sin(from) * (fin ? 5 : 2.4);
+    if (spec.launch && o.alive) { if (o.kind === 'brute') stagger(o, 0.6); else { o.air = o.airT = 1.0; stagger(o, 1.2); pop(o, 'launched', 'info'); } }
     if (spec.push) { const m = o.kind === 'brute' ? 2.4 : 1; o.kx -= Math.cos(from) * spec.push / m; o.ky -= Math.sin(from) * spec.push / m; }
     pop(o, fin && (f === K || f.byK) ? 'FINISHER ' + dmg : '' + dmg, o.team === 0 ? 'hurt' : fin ? 'good' : '');
     sparks(o.x, o.y, 0.9, o.team === 0 ? 0xff6a5a : 0xffe9a0, fin ? 14 : 7); sfx(o === K ? 'hurt' : 'hit');
@@ -223,7 +224,9 @@
   const CUT = { wind: 0.1, reach: 1.3, arc: 1.9, dmg: 13, pd: 14, rec: 0.2, lunge: 0.35, sta: 11 }, LUNGE = { wind: 0.22, reach: 1.5, arc: 1.1, dmg: 28, pd: 34, rec: 0.42, lunge: 1.7, sta: 24 },
     FINISH = { wind: 0.16, reach: 1.5, arc: 2.7, dmg: 22, pd: 40, rec: 0.38, lunge: 0.5, sta: 14 }, AUTO = { wind: 0.16, reach: 1.3, arc: 1.9, dmg: 15, pd: 16, rec: 0.3, lunge: 0.2 }, DUEL = { wind: 0.2, reach: 1.3, arc: 1.6, dmg: 9, pd: 20, rec: 0.3, lunge: 0.15 };
   const JAB = { wind: 0.1, reach: 1.25, arc: 1.6, dmg: 7, pd: 8, rec: 0.25 }, BEAT = 0.6; let HM = { out: false }, HD = null, RH = null, FL = null, PR = [], HK = { out: false }, BW = { aim: null }, WH = null, PT = null, LD = { on: false };
-  const MACE = { hammer: 1, lode: 1, pots: 1 }, PUNCH = { wind: 0.1, reach: 1.15, arc: 1.6, dmg: 8, pd: 14, rec: 0.22, lunge: 0.2 }, mass = o => o.kind === 'brute' ? 2.4 : 1;
+  const MACE = { hammer: 1, lode: 1, pots: 1, leap: 1, bat: 1 }, UPPER = { wind: 0.12, reach: 1.5, arc: 1.8, dmg: 6, pd: 20, rec: 0.25, lunge: 0.3, launch: true };
+  let LP = { aim: null }, BL = { a: null, fly: null }, BD = null, ST = { on: false, fly: [] };
+  const PUNCH = { wind: 0.1, reach: 1.15, arc: 1.6, dmg: 8, pd: 14, rec: 0.22, lunge: 0.2 }, mass = o => o.kind === 'brute' ? 2.4 : 1;
   const holdMove = g => { if (g.el > 0.17) { g.holding = true; K.hold = [g.wx, g.wy]; K.dest = null; } };
   const tapMove = (g, spec) => { if (!g.holding && g.dist < 14) { const o = nearestEnemy(K.x, K.y, 1.6); if (o && K.state === 'idle') attack(K, Math.atan2(o.y - K.y, o.x - K.x), spec); else K.dest = [g.wx, g.wy]; } if (g.holding) K.hold = null; };
   function chainLine(x0, y0, x1, y1, z) { const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) * 8); for (let i = 0; i <= n; i++) { const u = i / n, x = x0 + (x1 - x0) * u, y = y0 + (y1 - y0) * u; rectS(Math.round(E.sx(x, y)), Math.round(E.sy(x, y, z)), 2, 2, x + y + z + 0.3, i & 1 ? 0xc8ced8 : 0x55555e); } }
@@ -593,6 +596,129 @@
       },
       draw() { if (!LD.on) return; for (const ph of [0, 0.5]) { const p = (time * 1.6 + ph) % 1; sector(K.x, K.y, 0, 0.8 + (1 - p) * 4.5, 7, 0x8ac8f0, 0.15 + 0.3 * p, 0.1); } sector(K.x, K.y, 0, 2.6 + LD.ch, 7, 0xffe27a, 0.4, 0.07); },
     },
+    /* ================= five newer weapons (marked NEW in the bar) ================= */
+    leap: {
+      id: 'leap', name: 'Leap maul', tokens: 3, extra: 1, w: true, isNew: true, slide: 0.05, slam: true, title: 'Leap maul: jump in, land hard',
+      help: ['<b>Touch the king and drag</b> to where he should land; time slows and a ring shows the blast', '<b>Let go</b> and he leaps. Nothing can touch him in the air', 'He lands with a <b>shockwave that throws men outward</b> into rocks, trees and each other; anyone directly under him is crushed', 'He is open for a moment after landing', '<b>Hold the ground</b> to walk, <b>tap</b> for a plain blow'],
+      init() { LP = { aim: null, air: false }; },
+      ts() { return LP.aim ? 0.4 : 1; },
+      down(g) { if (g.onKing && K.state === 'idle' && K.sta > 10) { LP.aim = { x: K.x, y: K.y, ok: false }; K.dest = null; K.hold = null; } },
+      move(g) {
+        if (!g.onKing) { holdMove(g); return; } if (!LP.aim) return;
+        const dx = g.wx - K.x, dy = g.wy - K.y, d = Math.hypot(dx, dy) || 1, L = Math.min(d, 6.5); let tx = K.x + dx / d * L, ty = K.y + dy / d * L; const rd = Math.hypot(tx - C.x, ty - C.y); if (rd > C.R - 0.2) { tx = C.x + (tx - C.x) / rd * (C.R - 0.2); ty = C.y + (ty - C.y) / rd * (C.R - 0.2); }
+        LP.aim = { x: tx, y: ty, ok: L > 0.9 };
+      },
+      up(g) {
+        if (!g.onKing) { tapMove(g, CUT); return; }
+        const a = LP.aim; LP.aim = null; if (!a || !a.ok || K.state !== 'idle') return;
+        spend(18); const dx = a.x - K.x, dy = a.y - K.y, d = Math.hypot(dx, dy); K.hop = 1.2 + d * 0.28; roll(K, Math.atan2(dy, dx), d, 0.38 + d * 0.045, 2, null); LP.air = true;
+      },
+      update() {
+        if (K.state !== 'idle' && K.state !== 'roll') LP.aim = null;
+        if (!LP.air || K.state === 'roll') return;
+        LP.air = false; K.hop = 0; K.p.z = 0; K.ifr = 0; sfx('boom'); shake = Math.max(shake, 7); dust(K.x, K.y, 16); sparks(K.x, K.y, 0.2, 0xd8c8a0, 14, 4);
+        fx.push({ k: 'sw', x: K.x, y: K.y, face: 0, reach: 2.2, arc: 6.2, t: 0, life: 0.25, col: 0xffe9a0 });
+        for (const o of F) if (o.team === 1 && o.alive) { const d = Math.hypot(o.x - K.x, o.y - K.y); if (d < 2.2 + o.r) hit(o, { x: K.x, y: K.y, team: 0, byK: true }, { dmg: d < 0.85 ? 30 : 16 * (1 - d / 3.2), pd: 45, push: 10 * (1 - d / 3.2) }); }
+        K.state = 'rec'; K.st = 0.32; K.atk = null; K.swingT = 0;
+      },
+      draw() { const a = LP.aim; if (!a) return; gline(K.x, K.y, a.x, a.y, a.ok ? 0xffe27a : 0x8a8478, true); sector(a.x, a.y, 0, 2.2, 7, a.ok ? 0xffe27a : 0x8a8478, 0.5, 0.09); sector(a.x, a.y, 0, 0.85, 7, 0xff8a4a, 0.4); },
+    },
+    bolas: {
+      id: 'bolas', name: 'Bolas', tokens: 3, extra: 1, w: true, isNew: true, slide: 0.05, slam: true, title: 'Bolas: tie two things together',
+      help: ['<b>Swipe</b> to throw a weighted chain. The first thing it wraps (a man, a rock, the tree line) is <b>tethered</b>', 'Throw again at <b>something else</b> and the chain snaps taut: the two are <b>yanked together</b>. The further apart, the harder they meet', 'Man to man: they crash into each other. Man to rock or tree: he is flung into it', 'With one man tethered, <b>tap</b> to reel him in to you', '<b>Hold</b> to walk; tap next to someone to punch'],
+      init() { BL = { a: null, fly: null, fx: null }; K.noWeapon = true; },
+      down() { }, move: holdMove,
+      up(g) {
+        if (g.el < 0.34 && g.dist > 30) { K.hold = null; if (!BL.fly && K.state === 'idle' && K.sta > 6) { spend(9); BL.fly = { x: K.x, y: K.y, vx: Math.cos(g.wdir) * 15, vy: Math.sin(g.wdir) * 15, t: 0 }; K.face = g.wdir; K.swingT = 0; sfx('swing'); } return; }
+        if (!g.holding && g.dist < 14) { const o = nearestEnemy(K.x, K.y, 1.6); if (o && K.state === 'idle') attack(K, Math.atan2(o.y - K.y, o.x - K.x), PUNCH); else if (BL.a && BL.a.o && BL.a.o.alive) { const t = BL.a.o, dx = K.x - t.x, dy = K.y - t.y, d = Math.hypot(dx, dy) || 1; t.kx = dx / d * 11 / mass(t); t.ky = dy / d * 11 / mass(t); stagger(t, 0.9); t.slamT = 0; BL.a = null; sfx('dash'); } else K.dest = [g.wx, g.wy]; }
+        if (g.holding) K.hold = null;
+      },
+      snap(A, Bn) {
+        const P = q => q.o ? [q.o.x, q.o.y] : [q.x, q.y], a = P(A), b = P(Bn), dx = b[0] - a[0], dy = b[1] - a[1], d = Math.hypot(dx, dy) || 1, both = A.o && Bn.o, sp = Math.min(17, 7 + d * 2.2) * (both ? 0.62 : 1);
+        if (A.o) { A.o.kx = dx / d * sp / mass(A.o); A.o.ky = dy / d * sp / mass(A.o); stagger(A.o, 0.9); A.o.slamT = 0; pop(A.o, 'SNAP', 'good'); }
+        if (Bn.o) { Bn.o.kx = -dx / d * sp / mass(Bn.o); Bn.o.ky = -dy / d * sp / mass(Bn.o); stagger(Bn.o, 0.9); Bn.o.slamT = 0; }
+        BL.a = null; BL.fx = { a, b, t: 0.25 }; sfx('parry'); shake = Math.max(shake, 3);
+      },
+      update(dt) {
+        if (BL.a) { BL.a.t -= dt; if (BL.a.t <= 0 || (BL.a.o && !BL.a.o.alive)) BL.a = null; } if (BL.fx) { BL.fx.t -= dt; if (BL.fx.t <= 0) BL.fx = null; }
+        const f = BL.fly; if (!f) return; f.t += dt; f.x += f.vx * dt; f.y += f.vy * dt; let got = null;
+        for (const o of F) if (o.team === 1 && o.alive && !(BL.a && BL.a.o === o) && Math.hypot(o.x - f.x, o.y - f.y) < o.r + 0.3) { hit(o, { x: K.x, y: K.y, team: 0, byK: true }, { dmg: 4, pd: 12 }); got = { o }; break; }
+        if (!got) { for (const ob of obst) if (Math.hypot(ob.x - f.x, ob.y - f.y) < ob.r + 0.12) got = { x: f.x, y: f.y }; if (Math.hypot(f.x - C.x, f.y - C.y) > C.R + 0.9) got = { x: f.x, y: f.y }; }
+        if (got) { BL.fly = null; if (got.o && !got.o.alive) return; if (BL.a) this.snap(BL.a, got); else { got.t = 8; BL.a = got; sfx('block'); if (got.o) pop(got.o, 'tethered', 'info'); } }
+        else if (f.t > 0.45) BL.fly = null;
+      },
+      drawTop() {
+        const a = BL.a; if (a) { const ax = a.o ? a.o.x : a.x, ay = a.o ? a.o.y : a.y; chainLine(K.x, K.y, ax, ay, 0.6); const cx = Math.round(E.sx(ax, ay)), cy = Math.round(E.sy(ax, ay, 0.6)); rectS(cx - 2, cy - 2, 4, 4, ax + ay + 1.3, 0xffe27a); }
+        const f = BL.fly; if (f) for (let i = 0; i < 2; i++) { const an = time * 22 + i * Math.PI, x = f.x + Math.cos(an) * 0.28, y = f.y + Math.sin(an) * 0.28; rectS(Math.round(E.sx(x, y)) - 1, Math.round(E.sy(x, y, 0.8)) - 1, 4, 4, x + y + 1.2, 0x6a707c); }
+        if (BL.fx) chainLine(BL.fx.a[0], BL.fx.a[1], BL.fx.b[0], BL.fx.b[1], 0.6);
+      },
+    },
+    boulder: {
+      id: 'boulder', name: 'Great stone', tokens: 3, extra: 1, w: true, isNew: true, slide: 0.05, slam: true, title: 'Great stone: kick it, then get out of its way',
+      help: ['A <b>great round stone</b> sits in the clearing. Stand by it and <b>swipe</b> to boot it that way; a long swipe is a harder kick', 'It <b>rolls on and on</b>, bouncing off rocks and the tree line, flattening whoever it meets, harder the faster it rolls (yellow bar)', 'It does not care whose side you are on: a fast stone will <b>run the king over</b> too', 'Lean on it to shoulder it slowly into place', 'Away from the stone, <b>swipe</b> rolls you clear; <b>hold</b> to walk'],
+      init() { BD = { x: K.x - 1.3, y: K.y - 0.7, vx: 0, vy: 0, r: 0.55, rot: 0, hitAt: new Map() }; K.noWeapon = true; },
+      down() { }, move: holdMove,
+      up(g) {
+        if (g.el < 0.34 && g.dist > 30) { K.hold = null; const dx = BD.x - K.x, dy = BD.y - K.y, d = Math.hypot(dx, dy); if (d < 1.9 && K.state === 'idle' && K.sta > 8) { const big = g.dist > 130; spend(big ? 20 : 12); BD.vx += Math.cos(g.wdir) * (big ? 13 : 9); BD.vy += Math.sin(g.wdir) * (big ? 13 : 9); K.face = Math.atan2(dy, dx); K.swingT = 0; sfx('hit'); dust(BD.x, BD.y, 6); shake = Math.max(shake, 2.5); } else dodge(g.wdir, 1.9, 16); return; }
+        tapMove(g, PUNCH);
+      },
+      update(dt) {
+        const b = BD, k = Math.pow(0.72, dt); b.x += b.vx * dt; b.y += b.vy * dt; b.vx *= k; b.vy *= k; const sp = Math.hypot(b.vx, b.vy); b.rot += sp * dt * 3;
+        for (const ob of obst) { const dx = b.x - ob.x, dy = b.y - ob.y, d = Math.hypot(dx, dy) || 1; if (d < b.r + ob.r) { b.x = ob.x + dx / d * (b.r + ob.r); b.y = ob.y + dy / d * (b.r + ob.r); const dn = (b.vx * dx + b.vy * dy) / d; if (dn < 0) { b.vx -= 1.85 * dn * dx / d; b.vy -= 1.85 * dn * dy / d; if (sp > 4) { sparks(b.x, b.y, 0.4, 0xd8dce4, 6); sfx('block'); shake = Math.max(shake, 2); } } } }
+        const rx = b.x - C.x, ry = b.y - C.y, rd = Math.hypot(rx, ry); if (rd > C.R + 0.2) { b.x = C.x + rx / rd * (C.R + 0.2); b.y = C.y + ry / rd * (C.R + 0.2); const dn = (b.vx * rx + b.vy * ry) / rd; if (dn > 0) { b.vx -= 1.85 * dn * rx / rd; b.vy -= 1.85 * dn * ry / rd; if (sp > 4) sfx('block'); } }
+        for (const o of F) {
+          if (!o.alive) continue; const dx = o.x - b.x, dy = o.y - b.y, d = Math.hypot(dx, dy) || 1; if (d > b.r + o.r) continue;
+          if (o.team === 0) { const appr = (b.vx * dx + b.vy * dy) / d; if (o === K && sp > 4.5 && appr > 2 && K.ifr <= 0 && (b.hitAt.get(K) || -9) < time - 0.6) { b.hitAt.set(K, time); K.hp -= 10; K.flash = 1; K.kx += b.vx * 0.5; K.ky += b.vy * 0.5; pop(K, 'run over 10', 'hurt'); sfx('hurt'); shake = 5; if (K.hp <= 0) die(K); } else if (sp <= 4.5) { b.x = o.x - dx / d * (b.r + o.r); b.y = o.y - dy / d * (b.r + o.r); b.vx -= dx / d * 7 * dt; b.vy -= dy / d * 7 * dt; } }
+          else if (sp > 2) { if ((b.hitAt.get(o) || -9) < time - 0.4) { b.hitAt.set(o, time); hit(o, { x: b.x - b.vx, y: b.y - b.vy, team: 0, byK: true }, { dmg: Math.min(46, sp * 3.3), pd: 50 }); o.kx += b.vx * 0.6 / mass(o); o.ky += b.vy * 0.6 / mass(o); b.vx *= 0.88; b.vy *= 0.88; } }
+          else { o.x = b.x + dx / d * (b.r + o.r); o.y = b.y + dy / d * (b.r + o.r); }
+        }
+      },
+      meter() { return Math.hypot(BD.vx, BD.vy) / 13; },
+      sprites() { const b = BD; return [{ k: b.x + b.y, draw() { const cx = Math.round(E.sx(b.x, b.y)), cy = Math.round(E.sy(b.x, b.y, 0.5)), by = Math.round(E.sy(b.x, b.y, 0)), d0 = b.x + b.y + 0.3, R = 15; for (let dy = -4; dy <= 4; dy++) for (let dx = -17; dx <= 17; dx++) if (dx * dx / 289 + dy * dy / 16 < 1) E.dark(cx + dx, by + dy, b.x + b.y + 0.02, 0.6); for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) { const r2 = dx * dx + dy * dy; if (r2 > R * R) continue; const lt = (-dx - dy * 1.3) / R, sp = h2(((dx + b.rot * 5) | 0) >> 2, ((dy + b.rot * 3) | 0) >> 2); let c = lt > 0.75 ? 0xb8b2a4 : lt > 0.2 ? 0x9a948a : lt > -0.5 ? 0x7c776e : 0x5e5a56; if (sp < 0.16) c = T.mul(c, 0.8); if (r2 > (R - 1.5) * (R - 1.5)) c = 0x3a3640; E.px(cx + dx, cy + dy, d0 + (R - dy) / 40, c); } } }]; },
+    },
+    stone: {
+      id: 'stone', name: 'Sling', tokens: 2, w: true, isNew: true, title: "Shepherd's sling: let go at the right moment",
+      help: ['<b>Touch and hold the king</b>: he whirls the sling and time slows', 'A line sweeps round like a clock hand showing where the stone would fly. <b>Let go when it crosses your target</b>', 'The longer you whirl, the harder the stone (yellow bar); a full whirl goes through two men', 'Stones glance off rocks once', '<b>Hold the ground</b> to walk; <b>tap</b> to punch someone next to you'],
+      init() { ST = { on: false, ang: 0, c: 0, fly: [] }; K.noWeapon = true; },
+      ts() { return ST.on ? 0.5 : 1; },
+      down(g) { if (g.onKing && K.state === 'idle') { ST.on = true; ST.c = 0; K.dest = null; K.hold = null; } },
+      move(g) { if (!g.onKing) holdMove(g); },
+      up(g) {
+        if (!g.onKing) { tapMove(g, PUNCH); return; } if (!ST.on) return; ST.on = false; if (ST.c < 0.12) return;
+        let dir = ST.ang + Math.PI / 2; const o = nearestEnemy(K.x, K.y, 9, dir, 0.3); if (o) dir = Math.atan2(o.y - K.y, o.x - K.x);
+        const c = ST.c, v = 10 + 10 * c; ST.fly.push({ x: K.x, y: K.y, vx: Math.cos(dir) * v, vy: Math.sin(dir) * v, c, pierce: c > 0.8 ? 2 : 1, t: 0, seen: new Set(), b: false }); K.face = dir; K.swingT = 0; sfx('swing');
+      },
+      kmove() { if (ST.on) K.mx = K.my = 0; else kingMove(); },
+      update(dt) {
+        if (ST.on) { if (K.state !== 'idle') ST.on = false; ST.ang += 7.5 * dt; ST.c = Math.min(1, ST.c + dt * 1.7); K.face = ST.ang; }
+        for (const a of ST.fly) {
+          a.t += dt; a.x += a.vx * dt; a.y += a.vy * dt; const sp = Math.hypot(a.vx, a.vy); let stop = a.t > 1.0 || Math.hypot(a.x - C.x, a.y - C.y) > C.R + 1;
+          for (const o of F) if (o.team === 1 && o.alive && !a.seen.has(o) && Math.hypot(o.x - a.x, o.y - a.y) < o.r + 0.2) { a.seen.add(o); hit(o, { x: a.x - a.vx, y: a.y - a.vy, team: 0, byK: true }, { dmg: 8 + 22 * a.c, pd: 15 + 30 * a.c, push: 3 + 5 * a.c }); if (--a.pierce <= 0) stop = true; break; }
+          for (const ob of obst) { const dx = a.x - ob.x, dy = a.y - ob.y, d = Math.hypot(dx, dy) || 1; if (d < ob.r + 0.1) { if (a.b) stop = true; else { const dn = (a.vx * dx + a.vy * dy) / d; a.vx -= 2 * dn * dx / d; a.vy -= 2 * dn * dy / d; a.b = true; a.seen = new Set(); a.x = ob.x + dx / d * (ob.r + 0.12); a.y = ob.y + dy / d * (ob.r + 0.12); sfx('block'); sparks(a.x, a.y, 0.8, 0xd8dce4, 4); } } }
+          if (stop) { a.dead = true; dust(a.x, a.y, 2); }
+        }
+        ST.fly = ST.fly.filter(a => !a.dead);
+      },
+      meter() { return ST.on ? ST.c : 0; },
+      draw() { if (!ST.on) return; const d = ST.ang + Math.PI / 2, L = 4 + 5 * ST.c; gline(K.x, K.y, K.x + Math.cos(d) * L, K.y + Math.sin(d) * L, ST.c > 0.8 ? 0xffe27a : 0xffffff, true); },
+      drawTop() {
+        if (ST.on) { const x = K.x + Math.cos(ST.ang) * 0.9, y = K.y + Math.sin(ST.ang) * 0.9; sline(Math.round(E.sx(K.x, K.y)), Math.round(E.sy(K.x, K.y, 1.0)), Math.round(E.sx(x, y)), Math.round(E.sy(x, y, 1.0)), Math.max(x + y, K.x + K.y) + 1.5, 0x8a6a46, 0, 1); rectS(Math.round(E.sx(x, y)) - 1, Math.round(E.sy(x, y, 1.0)) - 1, 3, 3, x + y + 1.6, 0xc8c2b4); }
+        for (const a of ST.fly) { const cx = Math.round(E.sx(a.x, a.y)), cy = Math.round(E.sy(a.x, a.y, 0.9)); rectS(cx - 1, cy - 1, 3, 3, a.x + a.y + 1.2, 0xd8d2c4); E.px(Math.round(E.sx(a.x - a.vx * 0.02, a.y - a.vy * 0.02)), Math.round(E.sy(a.x - a.vx * 0.02, a.y - a.vy * 0.02, 0.9)), a.x + a.y + 1.1, 0x9a948a); E.dark(cx, Math.round(E.sy(a.x, a.y, 0)), a.x + a.y + 0.02, 0.6); }
+      },
+    },
+    bat: {
+      id: 'bat', name: 'Launcher', tokens: 3, extra: 1, w: true, isNew: true, slide: 0.05, slam: true, title: 'Launcher: knock them up, bat them away',
+      help: ['<b>Swipe at a man</b>: an uppercut that sends him <b>into the air</b>', 'While he is up there, <b>swipe again in any direction</b> to bat him that way like a ball', 'A batted man is a missile: he hurts whatever he hits (rocks, trees, the fire, other men) and they are knocked on in turn', 'Brutes are too heavy to launch; knock a lighter man into them instead', '<b>Hold</b> to walk; <b>tap</b> for a plain blow'],
+      init() { }, down() { }, move: holdMove,
+      up(g) {
+        if (!(g.el < 0.34 && g.dist > 30)) { tapMove(g, CUT); return; }
+        K.hold = null; if (K.state !== 'idle' || K.sta < 6) return;
+        let air = null, bd = 2.4; for (const o of F) if (o.team === 1 && o.alive && o.air > 0) { const d = Math.hypot(o.x - K.x, o.y - K.y); if (d < bd) { bd = d; air = o; } }
+        if (air) { spend(14); K.face = g.wdir; K.swingT = 0; sfx('hit'); fx.push({ k: 'sw', x: K.x, y: K.y, face: g.wdir, reach: 1.6, arc: 2.4, t: 0, life: 0.2, col: 0xffe9a0 }); air.air = air.airT = 0.3; air.batted = true; air.kx = Math.cos(g.wdir) * 15; air.ky = Math.sin(g.wdir) * 15; air.slamT = 0; hit(air, K, { dmg: 10, pd: 30 }); if (air.alive) pop(air, 'HOME RUN', 'good'); }
+        else { spend(12); let dir = g.wdir; const o = nearestEnemy(K.x, K.y, 2.4, dir, 0.6); if (o) dir = Math.atan2(o.y - K.y, o.x - K.x); attack(K, dir, UPPER); }
+      },
+      update(dt) { for (const o of F) if (o.air > 0) { o.air -= dt; if (!o.alive) { o.air = 0; continue; } o.p.z = Math.max(0, 2.2 * Math.sin(Math.PI * (1 - o.air / o.airT)) * (o.batted ? 0.4 : 1)); if (o.state !== 'stag') stagger(o, 0.3); if (o.air <= 0) { o.p.z = 0; o.batted = false; dust(o.x, o.y, 5); } } },
+    },
   };
   /* ---- time-stop tactics: the swipe scheme, but the world only moves when the king does ---- */
   MODES.still = Object.assign({}, MODES.swipe, { id: 'still', name: 'Time holds', tokens: 3, extra: 1, title: 'Time moves only when you do',
@@ -648,7 +774,7 @@
         f.st -= dt;
         if (f.state === 'wind') { const l = f.atk.lunge || 0; if (l) { f.kx = 0; f.ky = 0; f.x += Math.cos(f.face) * l / f.atk.wind * dt; f.y += Math.sin(f.face) * l / f.atk.wind * dt; } if (f.st <= 0) resolve(f); }
         else if (f.state === 'roll') {
-          f.x += f.rdx * dt; f.y += f.rdy * dt; f.p.z = Math.sin(Math.PI * (1 - f.st / f.rollDur)) * (f.dash ? 0.12 : 0.3);
+          f.x += f.rdx * dt; f.y += f.rdy * dt; f.p.z = Math.sin(Math.PI * (1 - f.st / f.rollDur)) * (f.hop || (f.dash ? 0.12 : 0.3));
           if (f.dash) for (const o of F) if (o.team !== f.team && o.alive && !f.dash.seen.has(o) && Math.hypot(o.x - f.x, o.y - f.y) < 0.85 + o.r) { f.dash.seen.add(o); hit(o, f, f.dash); }
           if (rnd() < 0.5) dust(f.x, f.y, 1);
           if (f.st <= 0) { f.p.z = 0; if (f.dash) { fx.push({ k: 'sw', x: f.x, y: f.y, face: f.face, reach: 1.1, arc: 2.6, t: 0, life: 0.2, col: 0xffffff }); f.state = 'rec'; f.st = f.dash.rec; f.atk = null; f.dash = null; f.swingT = 0; } else f.state = 'idle'; }
@@ -802,7 +928,7 @@
   function setMode(id) {
     mode = MODES[id]; const el = $('modes'); el.innerHTML = '';
     for (const w of [true, false]) { const row = document.createElement('div'); row.className = 'grp'; const l = document.createElement('span'); l.className = 'lbl'; l.textContent = w ? 'WEAPONS' : 'OTHER TESTS'; row.appendChild(l);
-      for (const k in MODES) { if (!!MODES[k].w !== w) continue; const b = document.createElement('button'); b.textContent = MODES[k].name; if (k === id) b.className = 'on'; b.onclick = () => setMode(k); row.appendChild(b); } el.appendChild(row); }
+      for (const k in MODES) { if (!!MODES[k].w !== w) continue; const b = document.createElement('button'); b.textContent = MODES[k].name; b.className = (k === id ? 'on ' : '') + (MODES[k].isNew ? 'new' : ''); b.onclick = () => setMode(k); row.appendChild(b); } el.appendChild(row); }
     $('help').className = ''; $('help').innerHTML = '<b>' + mode.title + '</b> <i>(tap to hide)</i><ul>' + mode.help.map(h => '<li>' + h + '</li>').join('') + '</ul>';
     try { location.hash = id; } catch (e) { }
     $('hud').style.top = ($('top').offsetHeight + 2) + 'px';
@@ -826,6 +952,6 @@
     bake(); camX = E.sx(C.x, C.y); camY = E.sy(C.x, C.y, 1);
     const h = (location.hash || '').slice(1); setMode(MODES[h] ? h : 'moment');
     $('busy').classList.remove('on'); requestAnimationFrame(tick);
-    window.__ct = { kscreen: () => [((E.sx(K.x, K.y) - camX) * zoom + cv.width / 2) / dpr, ((E.sy(K.x, K.y, 0.7) - camY) * zoom + cv.height / 2) / dpr], F: () => F, K: () => K, sim, draw, setMode, MODES, kingSwing, state: () => ({ wave, kills, over, n: F.length }) };
+    window.__ct = { BD: () => BD, ST: () => ST, kscreen: () => [((E.sx(K.x, K.y) - camX) * zoom + cv.width / 2) / dpr, ((E.sy(K.x, K.y, 0.7) - camY) * zoom + cv.height / 2) / dpr], F: () => F, K: () => K, sim, draw, setMode, MODES, kingSwing, state: () => ({ wave, kills, over, n: F.length }) };
   }, 30);
 })();
