@@ -20,6 +20,9 @@
     const b = a.bounds, near = (x0, y0, x1, y1) => x1 > b[0] - 8 && x0 < b[2] + 8 && y1 > b[1] - 8 && y0 < b[3] + 8;
     const out = !a.open, P = o => { if (out && o.at[0] > b[0] + 0.5 && o.at[0] < b[2] - 0.5 && o.at[1] > b[1] + 0.5 && o.at[1] < b[3] - 0.5) Kit.person(o); };
     const slit = (x, y) => F.slit(x, y || 60);
+    // when a building is cut open, leave out the yard furniture standing in front of it, so the rooms can be seen
+    const ob = a.open ? Site.BLD[Site.KEYS[a.open][0]] : null, hide = (x, y) => ob && x > ob.x0 - 1 && y > ob.y0 - 1 && (x > ob.x1 - 0.2 || y > ob.y1 - 0.2) && x < ob.x1 + 6 && y < ob.y1 + 6;
+    const use = (name, x, y, ...r) => hide(x, y) ? true : Site.use(name, x, y, ...r), lamp = (x, y) => { if (!hide(x, y)) B.lamp(x, y); }, tree = (x, y, o) => { if (!hide(x, y)) B.tree(x, y, o); };
 
     /* ---------------- walls and towers: one circuit round all three enclosures ---------------- */
     Kit.curtain('y', 42, 3.9, 43.5, H, 1.5, { seed: 51, gate: [27.2, 28.8], feats: [F.arch(0.392, 40, 80, false)] });                       // court | bailey
@@ -65,9 +68,9 @@
       for (const x of [22.4, 31.6]) use('banner', x, 15.02, 0, { h: 6.0, face: 'y', c: RED, len: 2.6 });
       use('brazier', 25.6, 15.9, 0, {}); use('brazier', 28.4, 15.9, 0, {});
       for (const p of [[18.6, 17.6], [34.5, 16.6], [38.6, 16.8]]) use('plant', p[0], p[1], 0, { kind: 'tree', s: 1.5 });
-      use('well', 37.5, 21, 0, { roof: true }); use('sundial', 21, 37, 0, {}); B.tree(38.6, 37.2, { s: 1.4, pal: T.LEAF_D, flowers: null, n: 10 }); B.tree(21.4, 21.2, { s: 1.1, flowers: T.BLOSSOM });
+      use('well', 37.5, 21, 0, { roof: true }); use('sundial', 21, 37, 0, {}); tree(38.6, 37.2, { s: 1.4, pal: T.LEAF_D, flowers: null, n: 10 }); tree(21.4, 21.2, { s: 1.1, flowers: T.BLOSSOM });
       use('stack', 39.6, 24.2, 0, { kind: 'barrels' }); use('roseArch', 17.65, 40.4, 0, {});
-      for (const p of [[23.4, 17.2], [31, 17.2], [40.6, 26.4], [40.6, 29.6], [20.2, 40.6], [16.6, 24.6], [16.6, 27.4], [34, 34], [23, 34]]) B.lamp(p[0], p[1]);
+      for (const p of [[23.4, 17.2], [31, 17.2], [40.6, 26.4], [40.6, 29.6], [20.2, 40.6], [16.6, 24.6], [16.6, 27.4], [34, 34], [23, 34]]) lamp(p[0], p[1]);
       for (const g of [[26.0, 16.4], [28.0, 16.4], [16.2, 24.9], [16.2, 27.1], [17.2, 31.6, 3.2], [9.5, 9.5, 13.3]]) P({ role: 'guard', name: 'Guard', at: [g[0], g[1], g[2] || 0], fixed: [0.6, 0.8] });
       P({ role: 'noble', name: 'Courtier', kinds: ['sit'], at: [26, 22, 0] }); P({ role: 'noble', fem: true, name: 'Lady of the court', kinds: ['sit', 'tend'], at: [31, 25, 0] });
       P({ role: 'villager', name: 'Gardener', apron: true, hat: 1, kinds: ['tend'], at: [25, 31, 0] }); P({ role: 'villager', name: 'Page', kinds: ['sit', 'tend'], at: [34, 22, 0] }); P({ role: 'monk', name: 'Scribe', kinds: ['sit'], at: [22, 26, 0] });
@@ -91,9 +94,9 @@
       use('weaponRack', 74.6, 30.4, 0, { face: 'x' }); use('weaponRack', 74.6, 32.6, 0, { face: 'x' }); use('weights', 60.4, 30.2, 0, {}); use('armour', 58, 26.4, 0, {});
       use('banner', 57, 25.62, 0, { h: 3.0, face: 'y', c: BLUE, len: 1.6 }); use('banner', 63, 25.62, 0, { h: 3.0, face: 'y', c: BLUE, len: 1.6 });
       // yard dressing
-      use('well', 49, 22.6, 0, { roof: true }); B.cart(81, 22); B.tree(83, 37, { s: 1.4, pal: T.LEAF_D, flowers: null, n: 10 }); B.tree(46.6, 38.4, { s: 1.2 });
+      use('well', 49, 22.6, 0, { roof: true }); B.cart(81, 22); tree(83, 37, { s: 1.4, pal: T.LEAF_D, flowers: null, n: 10 }); tree(46.6, 38.4, { s: 1.2 });
       use('stack', 52.6, 12.4, 0, { kind: 'barrels' }); use('stack', 85.6, 33, 0, { kind: 'crates' }); B.sack(54.6, 13.2); use('stack', 77.4, 26.4, 0, { kind: 'sacks' });
-      for (const p of [[45.4, 26.2], [45.4, 29.8], [52, 26.6], [68, 26.6], [78, 27], [85.6, 24.6], [85.6, 31.4], [62, 14.4], [76.4, 38.6], [48.4, 34]]) B.lamp(p[0], p[1]);
+      for (const p of [[45.4, 26.2], [45.4, 29.8], [52, 26.6], [68, 26.6], [78, 27], [85.6, 24.6], [85.6, 31.4], [62, 14.4], [76.4, 38.6], [48.4, 34]]) lamp(p[0], p[1]);
       for (let i = 0; i < 12; i++) B.bush(79 + h2(i, 1) * 8, 34.5 + h2(i, 2) * 6, { s: 0.8 + h2(i, 3) * 0.4, noBlock: true });
       P({ role: 'villager', name: 'Blacksmith', apron: true, kinds: ['smith'], at: [47.6, 17.6, 0] });
       for (let i = 0; i < 2; i++) P({ role: 'villager', name: 'Groom', hat: 1, kinds: ['stable'], at: [81 + i * 3, 17, 0] });
@@ -106,7 +109,7 @@
       use('roseArch', 17.65, 44.2, 0, {});
       // cloister walk along the chapel's east side
       for (let y = 46; y <= 62; y += 2) if (!use('column', 17.0, y, 0, { h: 2.4, r: 0.15 })) B.cyl(17.0, y, 0, 0.15, 2.4, 8, T.flat(0xb8b0a2), {});
-      E.quad([16, 45.2, 3.3], [0, 17.6, 0], [1.25, 0, -0.75], T.roof, { P: { pal: T.ROOF_SLATE, seed: 3 }, n: norm([0.75, 0, 1.25]) });
+      if (a.open !== 'CH0') E.quad([16, 45.2, 3.3], [0, 17.6, 0], [1.25, 0, -0.75], T.roof, { P: { pal: T.ROOF_SLATE, seed: 3 }, n: norm([0.75, 0, 1.25]) });
       for (const y of [49, 55, 61]) use('torch', 16.02, y, 0, { h: 1.7, face: 'x' });
       use('statue', 12.8, 63.9, 0, { kind: 'angel' }); use('statue', 9.2, 63.9, 0, { kind: 'maiden' });
       // lily pond and pavilion east of the bath house
@@ -121,17 +124,17 @@
       hz(-2.4, -1.9, 0.5, 4.3); hz(-1.9, 1.9, 3.8, 0.5); hz(-2.4, -2.4, 3.0, 0.5); hz(1.9, -2.4, 0.5, 3.0);
       if (!use('fountain', MX, MY + 0.2, 0, { r: 0.8 })) B.bush(MX, MY, {});
       // orchard, kitchen garden and bees in the south-west
-      for (let i = 0; i < 8; i++) { const x = 6.6 + (i % 4) * 3.3, y = 65.6 + ((i / 4) | 0) * 3.4; if (!use('orchardTree', x, y, 0, { seed: i, kind: ['apple', 'pear', 'plum', 'cherry'][i % 4], blossom: i % 3 === 0 })) B.tree(x, y, { s: 0.9, flowers: T.APPLE, fp: 0.04 }); }
+      for (let i = 0; i < 8; i++) { const x = 6.6 + (i % 4) * 3.3, y = 65.6 + ((i / 4) | 0) * 3.4; if (!use('orchardTree', x, y, 0, { seed: i, kind: ['apple', 'pear', 'plum', 'cherry'][i % 4], blossom: i % 3 === 0 })) tree(x, y, { s: 0.9, flowers: T.APPLE, fp: 0.04 }); }
       use('vegPatch', 22.6, 58.6, 0, { w: 3.6, d: 2.2 }); use('vegPatch', 22.6, 61.6, 0, { w: 3.6, d: 2.2 }); use('beehive', 22.9, 65, 0, {}); use('beehive', 23.3, 66.2, 0, {}); use('dovecote', 24.6, 69.4, 0, {});
       use('laundry', 38.6, 55.4, 0, { len: 2.4 });
       // rose walk, beds, benches
-      for (const x of [6.4, 9.6, 12.8, 23.6, 27, 30.4, 33.8]) use('roseArch', x, 56.2, 0, { face: 'x' });
+      for (const x of [23.6, 27, 30.4, 33.8]) use('roseArch', x, 56.2, 0, { face: 'x' });
       for (const p of [[20.2, 46, 'roses'], [20.2, 50, 'lavender'], [20.2, 54, 'tulips']]) use('flowerbed', p[0] - 0.05, p[1], 0, { w: 0.8, d: 2.6, kind: p[2] });
       for (const y of [46.4, 49.4, 52.4]) use('topiary', 16.6 + 0.9, y + 1.4, 0, { kind: 'ball', pot: false });
       for (const x of [22.5, 26, 32, 35.5]) use('topiary', x, 55.3, 0, { kind: x > 30 ? 'spiral' : 'cone', pot: false });
       use('stoneBench', 26.6, 57.8, 0, {}); use('stoneBench', 8, 57.8, 0, {}); use('sundial', 41.4, 53.6, 0, {}); use('birdBath', 42.4, 58.6, 0, { bird: true }); use('gardenStatue', 18.5, 59.6, 0, { kind: 'maiden' });
-      for (const p of [[17.2, 45], [19.8, 57.9], [28, 55.2], [30, 55.2], [10, 64.2], [12, 64.2], [42.6, 55], [21.4, 70.6]]) B.lamp(p[0], p[1]);
-      B.tree(42, 69.4, { s: 1.5, pal: T.LEAF_D, flowers: null, n: 10 }); B.tree(5.6, 64.2, { s: 1.1, flowers: T.BLOSSOM });
+      for (const p of [[17.2, 45], [19.8, 57.9], [28, 55.2], [30, 55.2], [10, 64.2], [12, 64.2], [42.6, 55], [21.4, 70.6]]) lamp(p[0], p[1]);
+      tree(42, 69.4, { s: 1.5, pal: T.LEAF_D, flowers: null, n: 10 }); tree(5.6, 64.2, { s: 1.1, flowers: T.BLOSSOM });
       for (let i = 0; i < 3; i++) P({ role: 'villager', name: 'Gardener', apron: true, hat: 1, kinds: ['tend'], at: [22 + i * 6, 57, 0] });
       P({ role: 'monk', name: 'Chaplain', kinds: ['sit', 'pray'], at: [11, 64.6, 0] }); P({ role: 'monk', name: 'Brother', kinds: ['sit'], at: [18.4, 52, 0] });
       P({ role: 'noble', name: 'Lady of the court', fem: true, kinds: ['sit', 'tend'], at: [39, 47, 0] }); P({ role: 'villager', name: 'Laundress', fem: true, apron: true, kinds: ['work', 'tend'], at: [39.4, 56.6, 0] });

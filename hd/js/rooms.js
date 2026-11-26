@@ -49,7 +49,7 @@
     build(c) { const { F, P, fl } = kit(c);
       fl(c.x0, c.y0, c.x1, c.y1, walnut);
       F('rug', 8, 8, { w: 4, d: 3.6, c: 0x7a1c22 }); F('throne', 9.3, 7.5, { s: 0.85 }); F('roundTable', 10.9, 9.6, { r: 0.42, food: true, seed: 6 }); F('chair', 11.6, 9.4, { face: '-x', cushion: BLUE }); F('harp', 8.2, 10.4);
-      F('statue', 12.7, 12.7, { kind: 'angel', gilt: true, c: 0xd8d2c8, face: '-x' }); F('lectern', 11.4, 12.4, { face: 'x' }); F('candelabra', 12.8, 11.3); F('vase', 7.5, 12.9, { stand: true }); F('chest', 9.3, 12.85, { face: '-y' }); F('globe', 12.8, 7.6);
+      F('statue', 12.7, 12.7, { kind: 'angel', gilt: true, c: 0xd8d2c8, face: '-x' }); F('lectern', 11.4, 12.4, { face: 'x' }); F('candelabra', 12.8, 11.3); F('vase', 6.1, 12.95, { stand: true }); F('chest', 9.3, 12.85, { face: '-y' }); F('globe', 12.8, 7.6);
       F('torch', 5.6, 6.2, { face: 'x', h: 1.9 }); F('chandelier', 9.9, 9.9, { h: 2.4, drop: 0.5, r: 0.5, n: 6, gold: true });
       P('monk', "The king's confessor", ['read', 'sit', 'play'], 10, 11.4); P('villager', 'Page', ['sit', 'play', 'work'], 9, 10, { fem: false, top: 0x34508f });
     } };
@@ -60,7 +60,7 @@
       fl(c.x0, c.y0, c.x1, c.y1, walnut);
       B.box(7.6, 5.6, z + 1.2, 1.7, 0.05, 1.4, { side: T.flat(0x8a6a22), ty: chart(1), noShadow: true }); B.box(9.6, 5.6, z + 1.2, 1.5, 0.05, 1.4, { side: T.flat(0x8a6a22), ty: chart(4), noShadow: true }); F('sconce', 11.6, 5.6, { h: 1.8 });
       dais(10.6, 10.6, 13.4, 13.4, 0.2, oak, 0x8a6a4a); F('telescope', 12.2, 12.2, { s: 1.4, face: '-x' }, 0.2); F('stool', 11.2, 12.8, {}, 0.2);
-      F('alchemy', 7.2, 12.75, { face: '-y' }); F('rug', 7.9, 8.1, { w: 3.2, d: 2.8, c: 0x2a2a5a, c2: 0xd9c070, c3: 0x14143a }); F('desk', 8.5, 8.6, { chair: true, s: 0.9 }); F('globe', 12.8, 7.9); F('cot', 12.7, 8.6, { c: 0x2a3a6a, s: 0.9 });
+      F('alchemy', 7.2, 12.75, { face: '-y' }); F('rug', 7.9, 8.1, { w: 3.2, d: 2.8, c: 0x2a2a5a, c2: 0xd9c070, c3: 0x14143a }); F('desk', 8.5, 8.6, { chair: true, s: 0.9 }); F('globe', 12.9, 12.95, {}, 0.2); F('cot', 12.7, 8.8, { c: 0x2a3a6a, s: 0.9 });
       F('scrollRack', 9.2, 12.95, { face: '-y', w: 1.2, h: 0.9 }); F('candelabra', 7.4, 11.9, { n: 3 }); F('chandelier', 9.6, 10, { h: 2.4, drop: 0.5, r: 0.5, n: 6 });
       P('monk', 'The Astronomer', ['work', 'read', 'sleep'], 9.5, 10.5); P('villager', 'Apprentice', ['work', 'read', 'sit'], 10.2, 8.2, { fem: false, top: 0x34508f, hat: 0 });
     } };
@@ -153,7 +153,7 @@
     wallX: [onX('W', 16.9, GL), onX('W', 29.6, GL), onX('W', 36.6, { y: 60, w: 12, h: 30 })], wallY: [onY('W', 6.6, { y: 50, h: 40 }), onY('W', 12.6, { y: 50, h: 40 })],
     build(c) { const { F, P, fl, part, dais } = kit(c);
       fl(4.5, 15.5, 14.5, 30.4, (x, y) => (x > 10.2 && x < 11.4 ? chk(x, y) : flags(x, y))); fl(4.5, 30.4, 14.5, 37.5, terra);
-      part('x', 30.4, 6, 14.5, { gaps: [[8.6, 10.2]] });
+      part('x', 30.4, 7.4, 14.5, { gaps: [[8.8, 10.4]] });
       // high table on a dais along the west wall
       dais(4.5, 18.4, 7.6, 25.2, 0.2, marble); F('feastTable', 6.2, 19, { face: 'x', len: 5.6, benches: false, cloth: RED, seed: 2 }, 0.2);
       F('throne', 5, 21.3, { face: 'x', kind: 'eat' }, 0.2); F('throne', 5, 22.3, { face: 'x', c: BLUE, kind: 'eat' }, 0.2); for (const y of [19.2, 24.6]) F('chair', 5.3, y, { face: 'x', cushion: y < 22 ? RED : BLUE, kind: 'eat', c: 0x5c3f2c }, 0.2);
@@ -165,7 +165,7 @@
       // minstrels
       F('rug', 10.4, 27.6, { w: 3, d: 2.4, pat: 'diamond', c: 0x2c4078, c2: CREAM, c3: 0x1a2040 }); F('harp', 11.2, 28.6); F('lute', 12.9, 28.2); F('drum', 12.4, 29.5); F('stool', 11.4, 29.6, { kind: 'play', look: [-0.5, -1] });
       // kitchen and buttery
-      F('hearth', 10.7, 30.55, { w: 2.4, h: 1.9 }); F('dishShelf', 6.3, 30.55, { w: 1.2 }); F('cauldron', 8.2, 33.4); F('butcherBlock', 10.4, 34); F('breadTable', 12.6, 33.2, { face: '-x' }); F('hangRack', 9.4, 36.7, { len: 2.4, h: 1.5 });
+      F('hearth', 10.7, 30.55, { w: 2.4, h: 1.9 }); F('dishShelf', 7.5, 30.55, { w: 1.2 }); F('cauldron', 8.2, 33.4); F('butcherBlock', 10.4, 34); F('breadTable', 12.6, 33.2, { face: '-x' }); F('hangRack', 9.4, 36.7, { len: 2.4, h: 1.5 });
       for (let i = 0; i < 2; i++) F('cask', 12.4 + i * 1.05, 36.2, { face: '-y', s: 0.85 }); F('waterBarrel', 7.4, 36.8); F('stack', 5.9, 35.9, { kind: 'sacks', s: 0.8 }); F('chandelier', 9.6, 33, { h: 2.4, drop: 0.5, r: 0.5, n: 6 });
       P('guard', 'Hall guard', null, 13.6, 24.9, { fixed: [-1, 0.3] }); P('noble', 'The Steward', ['eat', 'drink'], 10.8, 25); for (let i = 0; i < 4; i++) P('noble', null, ['eat'], 10.8, 17 + i * 2, { fem: i % 2 === 0 });
       P('villager', 'Harper', ['play'], 11.6, 27.9, { top: 0x6a3a7a, hat: 2 }); for (let i = 0; i < 3; i++) P('villager', ['Head cook', 'Cook', 'Baker'][i], ['cook'], 8 + i * 1.5, 32, { apron: true, hat: i ? 0 : 3 }); P('villager', 'Butler', ['drink', 'cook'], 11.6, 35.4, { top: 0x3a3a4a }); for (let i = 0; i < 2; i++) P('villager', 'Server', ['eat', 'drink'], 9.4, 26 + i, { apron: true });
@@ -235,7 +235,7 @@
       B.box(30.4, 48.2, z, 2.2, 1.2, 0.5, { side: T.wood, P: { c: 0x5c3f2c }, top: (s, t, q, a, b) => { const e = Math.min(a * 2.2, (1 - a) * 2.2, b * 1.2, (1 - b) * 1.2); return e < 0.08 ? 0x7a5a3c : e < 0.1 ? 0x1a3020 : mul(0x2f7a48, 0.94 + h2(Math.floor(s * 32) >> 1, Math.floor(t * 32) >> 1) * 0.1); } }); B.blocks.push([30.4, 48.2, 2.2, 1.2, z]);
       [[30.9, 48.6, 0xe8e2d4], [31.6, 48.9, 0xc8372f], [31.9, 48.6, 0xe0b040], [32.1, 49.1, 0x2a2630]].forEach(p => E.blob([p[0], p[1], z + 0.54], 0.045, () => p[2], { noShadow: true, f: E.F_NOAO }));
       B.pois.push({ x: 31.5, y: 49.75, z, kind: 'play', fx: 0, fy: -1 }, { x: 31.5, y: 47.85, z, kind: 'play', fx: 0, fy: 1 });
-      F('cardTable', 34.7, 49.6); F('gameTable', 29, 51.4, { face: 'x', s: 0.9 }); F('harp', 35.4, 52.8); F('lute', 34.2, 53.4); F('drum', 33, 53.2, { s: 0.9 }); F('bench', 35.9, 46, { face: '-x', len: 2, back: true });
+      F('cardTable', 34.7, 49.6); F('gameTable', 30.4, 52.8, { face: 'x', s: 0.9 }); F('harp', 35.4, 52.8); F('lute', 34.2, 53.4); F('drum', 33, 53.2, { s: 0.9 }); F('bench', 35.9, 46, { face: '-x', len: 2, back: true });
       F('rug', 33.2, 48.2, { w: 3, d: 2.9, pat: 'diamond', c: 0x2f6a44, c2: 0xe8c890, c3: 0x1a3020 }); F('chandelier', 32.4, 49.6, { h: 2.6, drop: 0.5, r: 0.7 }); F('cask', 28.7, 45.3, { s: 0.75 }); F('candelabra', 36, 53.5);
       for (let i = 0; i < 2; i++) P('villager', 'Bath attendant', ['bathe', 'drink'], 25 + i, 51.6, { apron: true }); P('noble', null, ['bathe', 'sit'], 27, 52.4, { fem: true });
       for (let i = 0; i < 3; i++) P('noble', null, ['play', 'sit', 'drink'], 31 + i, 51, { fem: i === 1 }); P('villager', 'Minstrel', ['play'], 34.4, 52.4, { top: 0x8a2a6a, hat: 2 }); P('guard', 'Off-duty guard', ['play', 'drink', 'sit'], 30, 50.4);
