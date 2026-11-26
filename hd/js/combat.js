@@ -73,7 +73,7 @@
     if (kind === 'swing') noise(0.09, 0.12, 1800); else if (kind === 'hit') { tone('triangle', 150, 50, 0.12, 0.3); noise(0.05, 0.12, 600); }
     else if (kind === 'block') tone('square', 760, 520, 0.07, 0.1); else if (kind === 'parry') { tone('square', 1500, 1900, 0.16, 0.1); }
     else if (kind === 'hurt') tone('sawtooth', 200, 70, 0.18, 0.18); else if (kind === 'die') tone('sawtooth', 160, 40, 0.35, 0.16);
-    else if (kind === 'bow') tone('triangle', 600, 200, 0.08, 0.12); else if (kind === 'dash') noise(0.18, 0.16, 900); else if (kind === 'wave') tone('triangle', 330, 660, 0.3, 0.14); else if (kind === 'drum') tone('sine', 120, 55, 0.13, 0.3); else if (kind === 'drum2') tone('sine', 170, 80, 0.1, 0.22);
+    else if (kind === 'bow') tone('triangle', 600, 200, 0.08, 0.12); else if (kind === 'dash') noise(0.18, 0.16, 900); else if (kind === 'wave') tone('triangle', 330, 660, 0.3, 0.14); else if (kind === 'boom') { tone('sine', 95, 30, 0.45, 0.45); noise(0.35, 0.3, 90); } else if (kind === 'drum') tone('sine', 120, 55, 0.13, 0.3); else if (kind === 'drum2') tone('sine', 170, 80, 0.1, 0.22);
   }
 
   /* ================= fighters ================= */
@@ -222,7 +222,11 @@
   /* ---------- the king, per control scheme ---------- */
   const CUT = { wind: 0.1, reach: 1.3, arc: 1.9, dmg: 13, pd: 14, rec: 0.2, lunge: 0.35, sta: 11 }, LUNGE = { wind: 0.22, reach: 1.5, arc: 1.1, dmg: 28, pd: 34, rec: 0.42, lunge: 1.7, sta: 24 },
     FINISH = { wind: 0.16, reach: 1.5, arc: 2.7, dmg: 22, pd: 40, rec: 0.38, lunge: 0.5, sta: 14 }, AUTO = { wind: 0.16, reach: 1.3, arc: 1.9, dmg: 15, pd: 16, rec: 0.3, lunge: 0.2 }, DUEL = { wind: 0.2, reach: 1.3, arc: 1.6, dmg: 9, pd: 20, rec: 0.3, lunge: 0.15 };
-  const JAB = { wind: 0.1, reach: 1.25, arc: 1.6, dmg: 7, pd: 8, rec: 0.25 }, BEAT = 0.6; let HM = { out: false }, HD = null, RH = null, FL = null, PR = [];
+  const JAB = { wind: 0.1, reach: 1.25, arc: 1.6, dmg: 7, pd: 8, rec: 0.25 }, BEAT = 0.6; let HM = { out: false }, HD = null, RH = null, FL = null, PR = [], HK = { out: false }, BW = { aim: null }, WH = null, PT = null, LD = { on: false };
+  const MACE = { hammer: 1, lode: 1, pots: 1 }, PUNCH = { wind: 0.1, reach: 1.15, arc: 1.6, dmg: 8, pd: 14, rec: 0.22, lunge: 0.2 }, mass = o => o.kind === 'brute' ? 2.4 : 1;
+  const holdMove = g => { if (g.el > 0.17) { g.holding = true; K.hold = [g.wx, g.wy]; K.dest = null; } };
+  const tapMove = (g, spec) => { if (!g.holding && g.dist < 14) { const o = nearestEnemy(K.x, K.y, 1.6); if (o && K.state === 'idle') attack(K, Math.atan2(o.y - K.y, o.x - K.x), spec); else K.dest = [g.wx, g.wy]; } if (g.holding) K.hold = null; };
+  function chainLine(x0, y0, x1, y1, z) { const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) * 8); for (let i = 0; i <= n; i++) { const u = i / n, x = x0 + (x1 - x0) * u, y = y0 + (y1 - y0) * u; rectS(Math.round(E.sx(x, y)), Math.round(E.sy(x, y, z)), 2, 2, x + y + z + 0.3, i & 1 ? 0xc8ced8 : 0x55555e); } }
   const BASH = { wind: 0.1, reach: 1.5, arc: 2.0, dmg: 4, pd: 30, rec: 0.3, lunge: 0.3, push: 9.5 }, BASH2 = { wind: 0.22, reach: 1.6, arc: 1.6, dmg: 7, pd: 50, rec: 0.45, lunge: 1.7, push: 14.5 };
   const spend = c => { K.sta -= c; K.staD = 0.55; };
   function nearestEnemy(x, y, max, dir, cone) { let b = null, bd = max; for (const o of F) if (o.team === 1 && o.alive) { const d = Math.hypot(o.x - x, o.y - y); if (d < bd && (dir === undefined || adiff(Math.atan2(o.y - y, o.x - x), dir) < cone)) { bd = d; b = o; } } return b; }
@@ -308,7 +312,7 @@
     },
     /* ---- kinetic ARPG: speed is the weapon ---- */
     moment: {
-      id: 'moment', name: 'Momentum', tokens: 3, extra: 1, title: 'Speed is your weapon',
+      id: 'moment', name: 'Lance', tokens: 3, extra: 1, w: true, title: 'Lance: speed is your weapon',
       help: ['<b>Hold</b> and the king runs toward your finger, building speed; he keeps his momentum and turns in arcs', 'He <b>cuts down anyone he runs past</b>. The faster he is going, the harder the blow (yellow bar)', 'Men he hits are flung back and <b>bowl over</b> the men behind them', 'Sharp turns and taking a hit bleed speed; let go to coast to a stop', '<b>Tap</b> for a quick jab when you are caught standing'],
       init() { K.vel = [0, 0]; K.hitAt = new Map(); K.lastHp = K.hp; },
       down(g) { K.hold = [g.wx, g.wy]; }, move(g) { K.hold = [g.wx, g.wy]; },
@@ -340,7 +344,7 @@
     },
     /* ---- kinetic: a thrown hammer that bounces and comes back ---- */
     hammer: {
-      id: 'hammer', name: 'Hammer throw', tokens: 2, title: 'Throw it, call it back',
+      id: 'hammer', name: 'Warhammer', tokens: 2, w: true, title: 'Warhammer: throw it, call it back',
       help: ['<b>Hold the ground</b> to walk, tap to walk to a spot', '<b>Swipe</b> to hurl the hammer; it bounces off rocks and the tree line and strikes everyone it touches', 'It lands and lies there. <b>Tap anywhere</b> to call it back: it hits everything between it and you', 'Catching it sends out a small shockwave', 'While it is out you are unarmed: <b>swipe</b> rolls instead'],
       init() { HM = { out: false }; },
       down() { }, move(g) { if (g.el > 0.17) { g.holding = true; K.hold = [g.wx, g.wy]; K.dest = null; } },
@@ -369,8 +373,8 @@
     },
     /* ---- survivors-like: weapons work on their own, you only move ---- */
     horde: {
-      id: 'horde', name: 'Horde', tokens: 99, horde: true, title: 'Just keep moving',
-      help: ['<b>Hold</b> to move; that is nearly all you do', 'Blades <b>circle the king</b> and cut anyone they touch; he also sweeps around himself every moment or so', 'A large rabble pours in from every side', 'Each few kills <b>levels him up</b> (yellow bar) with a random boon: more blades, wider orbit, faster sweep…', '<b>Flick</b> to dash out of a tight spot'],
+      id: 'horde', name: 'Dancing blades', tokens: 3, extra: 2, w: true, title: 'Dancing blades: they fight, you move',
+      help: ['<b>Hold</b> to move; that is nearly all you do', 'Blades <b>circle the king</b> and cut anyone they touch; he also sweeps around himself every moment or so', 'Each few kills <b>levels him up</b> (yellow bar) with a random boon: more blades, wider orbit, faster sweep…', '<b>Flick</b> to dash out of a tight spot'],
       init() { HD = { blades: 2, rad: 1.25, spd: 3.6, sweep: 1.3, t: 1, xp: 0, need: 5, k0: 0, hitAt: new Map(), ang: 0 }; },
       down(g) { K.hold = [g.wx, g.wy]; }, move(g) { K.hold = [g.wx, g.wy]; }, up(g) { K.hold = null; if (g.el < 0.3 && g.dist > 40) dodge(g.wdir, 2.1, 18); },
       update(dt) {
@@ -384,7 +388,7 @@
     },
     /* ---- rhythm: strike on the drum beat ---- */
     drum: {
-      id: 'drum', name: 'War drum', tokens: 2, title: 'Strike on the beat',
+      id: 'drum', name: 'War drum', tokens: 2, w: true, title: 'War drum: strike on the beat',
       help: ['A war drum beats; a ring closes on the king with each beat', '<b>Tap on the beat</b> and he leaps to the nearest enemy (or the one you tap) and strikes', 'Every hit in time raises the <b>chain</b> (yellow bar) and the damage; off the beat it breaks', 'He cannot be hit mid-leap, so staying in time keeps him safe', '<b>Swipe</b> to sidestep (free on the beat), <b>hold</b> to walk'],
       init() { RH = { t: 0, combo: 0, idle: 0 }; },
       down() { }, move(g) { if (g.el > 0.2) { g.holding = true; K.hold = [g.wx, g.wy]; K.dest = null; } },
@@ -406,7 +410,7 @@
     },
     /* ---- physics: an iron ball on a chain, simulated as a rope ---- */
     flail: {
-      id: 'flail', name: 'Ball & chain', tokens: 3, extra: 1, title: 'Swing the iron ball',
+      id: 'flail', name: 'Flail', tokens: 3, extra: 1, w: true, title: 'Flail: swing the iron ball',
       help: ['The king swings a <b>heavy iron ball on a chain</b>; it is real rope physics', '<b>Hold</b> to move. While he is on the move he keeps the ball <b>whirling round him</b>; walk the circle into the enemy', 'The ball hurts whatever it hits, <b>harder the faster it is moving</b> (yellow bar)', '<b>Tap</b> to yank the ball back toward you, through anyone in the way', '<b>Flick</b> to dash; the chain snaps the ball after you'],
       init() { FL = { p: [], hitAt: new Map(), sp: 0 }; for (let i = 0; i < 8; i++) FL.p.push({ x: K.x, y: K.y + i * 0.1, px: K.x, py: K.y + i * 0.1 }); K.noWeapon = true; },
       down(g) { K.hold = [g.wx, g.wy]; }, move(g) { K.hold = [g.wx, g.wy]; },
@@ -433,7 +437,7 @@
     },
     /* ---- physics: shove bodies into rocks, trees, the fire and each other ---- */
     shove: {
-      id: 'shove', name: 'Shield bash', tokens: 3, extra: 1, slide: 0.05, title: 'Knock them into things',
+      id: 'shove', name: 'Shield bash', tokens: 3, extra: 1, slide: 0.05, slam: true, title: 'Knock them into things',
       help: ['The bash itself barely hurts. <b>What they hit does</b>: rocks, the tree line, the campfire, each other', '<b>Swipe</b> to shield-bash that way; a <b>long swipe</b> is a charging bash that throws them much further', 'Bodies carry momentum and <b>knock on</b> into the next man', 'Three loose <b>barrels</b> can be bashed across the clearing', '<b>Hold the ground</b> to walk, <b>hold the king</b> to brace behind the shield'],
       init() { PR = [[10.6, 11.2], [14.2, 13.0], [12.2, 15.4]].map(p => ({ x: p[0], y: p[1], vx: 0, vy: 0, r: 0.3, rot: 0, hitAt: new Map() })); },
       down(g) { if (g.onKing) startBlock(); },
@@ -446,15 +450,6 @@
       },
       onSwing(s) { if (!s.push) return; for (const b of PR) { const dx = b.x - K.x, dy = b.y - K.y; if (Math.hypot(dx, dy) < s.reach + 0.4 && adiff(Math.atan2(dy, dx), K.face) < s.arc / 2) { b.vx += Math.cos(K.face) * (s.push + 3); b.vy += Math.sin(K.face) * (s.push + 3); sfx('hit'); dust(b.x, b.y, 4); } } },
       update(dt) {
-        const slam = (o, s, label, extra) => { o.slamT = 0.3; if (hit(o, { x: o.x + o.kx, y: o.y + o.ky, team: 0, byK: true }, { dmg: s * 2.6 + (extra || 0), pd: s * 8 }) && label) pop(o, label, 'good'); dust(o.x, o.y, 5); };
-        for (const o of F) {
-          if (o.team !== 1 || !o.alive) continue; o.slamT = (o.slamT || 0) - dt; const s = Math.hypot(o.kx, o.ky); if (s < 3.2 || o.slamT > 0) continue;
-          let done = false;
-          for (const ob of obst) { const dx = o.x - ob.x, dy = o.y - ob.y, d = Math.hypot(dx, dy) || 1; if (d < o.r + ob.r + 0.1 && o.kx * dx + o.ky * dy < 0) { slam(o, s, ob.fire ? 'BURNED' : 'SLAM', ob.fire ? 14 : 0); const dot = (o.kx * dx + o.ky * dy) / d; o.kx = (o.kx - 1.6 * dot * dx / d) * 0.45; o.ky = (o.ky - 1.6 * dot * dy / d) * 0.45; done = true; break; } }
-          if (done) continue;
-          const rx = o.x - C.x, ry = o.y - C.y, rd = Math.hypot(rx, ry); if (rd > C.R + 1.2 && o.kx * rx + o.ky * ry > 0) { slam(o, s, 'INTO THE TREES'); o.kx *= -0.3; o.ky *= -0.3; continue; }
-          for (const b of F) if (b !== o && b.team === 1 && b.alive && Math.hypot(b.x - o.x, b.y - o.y) < o.r + b.r + 0.12 && o.kx * (b.x - o.x) + o.ky * (b.y - o.y) > 0) { const m = b.kind === 'brute' ? 2.4 : 1; slam(b, s * 0.7, 'KNOCK-ON'); slam(o, s * 0.4); b.kx += o.kx * 0.65 / m; b.ky += o.ky * 0.65 / m; b.slamT = 0.25; o.kx *= 0.35; o.ky *= 0.35; break; }
-        }
         for (const b of PR) {
           const k = Math.pow(0.3, dt), sp = Math.hypot(b.vx, b.vy); b.x += b.vx * dt; b.y += b.vy * dt; b.vx *= k; b.vy *= k; b.rot += sp * dt * 6;
           for (const ob of obst) { const dx = b.x - ob.x, dy = b.y - ob.y, d = Math.hypot(dx, dy) || 1; if (d < b.r + ob.r) { b.x = ob.x + dx / d * (b.r + ob.r); b.y = ob.y + dy / d * (b.r + ob.r); const dot = (b.vx * dx + b.vy * dy) / d; if (dot < 0) { b.vx -= 1.7 * dot * dx / d; b.vy -= 1.7 * dot * dy / d; if (sp > 3) sfx('block'); } } }
@@ -466,11 +461,155 @@
       },
       sprites() { return PR.map(b => ({ k: b.x + b.y, draw() { const cx = Math.round(E.sx(b.x, b.y)), by = Math.round(E.sy(b.x, b.y, 0)), d0 = b.x + b.y + 0.1, sh = Math.floor(b.rot) % 3; for (let dy = -2; dy <= 2; dy++) for (let dx = -8; dx <= 8; dx++) if (dx * dx / 64 + dy * dy / 5 < 1) E.dark(cx + dx, by + dy, d0 - 0.05, 0.65); for (let r = 0; r < 17; r++) { const w = r < 2 || r > 14 ? 5 : r < 4 || r > 12 ? 6 : 7; for (let x = -w; x < w; x++) { let c = (r === 3 || r === 8 || r === 13) ? (x < -2 ? 0x8a8e98 : 0x4a4a54) : ((x + 20 + sh) % 3 === 0 ? 0x5e4028 : x < -3 ? 0xa87c50 : x > 3 ? 0x6a4a2e : 0x8a623e); if (r > 14) c = r === 16 ? 0x74543a : 0x9a7650; E.px(cx + x, by - r, d0 + r / 40, c); } } } })); },
     },
+    /* ================= five more weapons ================= */
+    hook: {
+      id: 'hook', name: 'Chain hook', tokens: 2, w: true, slide: 0.05, slam: true, title: 'Chain hook: haul them in, or haul yourself across',
+      help: ['<b>Swipe</b> to fire the hook', 'Hook a <b>man</b> and he is dragged to your feet, through anyone in the way, and takes a heavy blow on arrival', 'Hook a <b>rock or the tree line</b> (or a brute, who is too heavy to pull) and the chain hauls <b>you</b> there instead, cutting everyone on the path', '<b>Hold</b> to walk; <b>tap</b> to punch someone next to you'],
+      init() { HK = { out: false }; K.noWeapon = true; },
+      down() { }, move: holdMove,
+      up(g) {
+        if (g.el < 0.34 && g.dist > 30) { K.hold = null; if (!HK.out && K.state === 'idle' && K.sta > 6) { spend(10); HK = { out: true, ph: 'fly', x: K.x, y: K.y, vx: Math.cos(g.wdir) * 17, vy: Math.sin(g.wdir) * 17, t: 0 }; K.face = g.wdir; K.swingT = 0; sfx('swing'); } return; }
+        tapMove(g, PUNCH);
+      },
+      update(dt) {
+        const h = HK; if (!h.out) return; h.t += dt;
+        if (h.ph === 'fly') {
+          h.x += h.vx * dt; h.y += h.vy * dt;
+          for (const o of F) if (o.team === 1 && o.alive && Math.hypot(o.x - h.x, o.y - h.y) < o.r + 0.28) { hit(o, { x: K.x, y: K.y, team: 0, byK: true }, { dmg: 5, pd: 15 }); if (!o.alive) { h.out = false; return; } h.tgt = o; sfx('block'); if (o.kind === 'brute') { h.ph = 'king'; h.ax = o.x; h.ay = o.y; } else { h.ph = 'enemy'; stagger(o, 1.0); } break; }
+          if (h.ph === 'fly') { let stuck = Math.hypot(h.x - C.x, h.y - C.y) > C.R + 0.7; for (const ob of obst) if (Math.hypot(h.x - ob.x, h.y - ob.y) < ob.r + 0.12) stuck = true; if (stuck) { h.ph = 'king'; h.ax = h.x; h.ay = h.y; sparks(h.x, h.y, 0.6, 0xd8dce4, 6); sfx('block'); } else if (h.t > 0.4) h.out = false; }
+          if (h.ph === 'king') { const dx = h.ax - K.x, dy = h.ay - K.y, d = Math.hypot(dx, dy); K.dest = null; K.hold = null; if (K.state === 'idle' || K.state === 'rec') { K.state = 'idle'; roll(K, Math.atan2(dy, dx), Math.max(0.3, d - 0.85), Math.max(0.12, d / 15), d / 15 + 0.12, { dmg: 14, pd: 30, rec: 0.15 }); h.ph = 'ride'; } else h.out = false; }
+        } else if (h.ph === 'enemy') {
+          const o = h.tgt; if (!o.alive) { h.out = false; return; } const dx = K.x - o.x, dy = K.y - o.y, d = Math.hypot(dx, dy) || 1; h.x = o.x; h.y = o.y;
+          if (d < 1.05 || h.t > 1.6) { h.out = false; o.kx = o.ky = 0; if (d < 1.5) { K.face = Math.atan2(-dy, -dx); K.swingT = 0; hit(o, K, { dmg: 16, pd: 40, push: 6 }); } }
+          else { o.kx = dx / d * 11; o.ky = dy / d * 11; if (o.state !== 'stag') stagger(o, 0.6); }
+        } else if (K.state !== 'roll') h.out = false;
+      },
+      drawTop() { const h = HK; if (!h.out) return; const tx = h.ph === 'ride' ? h.ax : h.x, ty = h.ph === 'ride' ? h.ay : h.y; chainLine(K.x, K.y, tx, ty, 0.7); const cx = Math.round(E.sx(tx, ty)), cy = Math.round(E.sy(tx, ty, 0.7)); rectS(cx - 2, cy - 2, 5, 5, tx + ty + 1.2, 0x8a8e98); rectS(cx - 1, cy - 1, 2, 2, tx + ty + 1.2, 0xe4e8f0); },
+    },
+    bow: {
+      id: 'bow', name: 'Longbow', tokens: 2, w: true, title: 'Longbow: five arrows, go and get them back',
+      help: ['<b>Touch the king and pull back</b> to draw; time slows. Let go to loose', 'A fuller draw flies faster and <b>pierces</b> up to four men; the last one it sticks in at full draw is <b>pinned</b>', 'Arrows <b>glance off rocks</b> and carry on', 'You have <b>five arrows</b> (yellow bar). They stay where they land: <b>walk over them</b> to take them back', '<b>Hold</b> to walk; <b>tap</b> to club someone next to you with the bow'],
+      init() { BW = { n: 5, fly: [], ground: [], aim: null }; K.noWeapon = true; },
+      ts() { return BW.aim ? 0.4 : 1; },
+      down(g) { if (g.onKing && K.state === 'idle') { BW.aim = { pw: 0, dir: K.face }; K.dest = null; K.hold = null; } },
+      move(g) { if (g.onKing) { if (BW.aim) { BW.aim.pw = clamp((g.dist - 18) / 150, 0, 1); BW.aim.dir = g.wdir + Math.PI; K.face = BW.aim.dir; } return; } holdMove(g); },
+      up(g) {
+        if (g.onKing) { const a = BW.aim; BW.aim = null; if (a && a.pw > 0.1) { if (BW.n > 0) { BW.n--; const v = 9 + 14 * a.pw; BW.fly.push({ x: K.x, y: K.y, vx: Math.cos(a.dir) * v, vy: Math.sin(a.dir) * v, pw: a.pw, pierce: 1 + Math.floor(a.pw * 3.01), t: 0, seen: new Set(), bounced: false }); sfx('bow'); } else pop(K, 'no arrows!', 'hurt'); } return; }
+        tapMove(g, PUNCH);
+      },
+      update(dt) {
+        if (K.state !== 'idle') BW.aim = null;
+        for (const a of BW.fly) {
+          a.t += dt; a.x += a.vx * dt; a.y += a.vy * dt; const sp = Math.hypot(a.vx, a.vy); let stop = a.t > 1.1;
+          for (const o of F) if (o.team === 1 && o.alive && !a.seen.has(o) && Math.hypot(o.x - a.x, o.y - a.y) < o.r + 0.2) { a.seen.add(o); const dealt = hit(o, { x: a.x - a.vx, y: a.y - a.vy, team: 0, byK: true }, { dmg: 9 + 19 * a.pw, pd: 10 + 25 * a.pw }); o.kx += a.vx * 0.2 / mass(o); o.ky += a.vy * 0.2 / mass(o); if (--a.pierce <= 0) { stop = true; if (a.pw > 0.7 && o.alive) { stagger(o, 1.6); pop(o, 'PINNED', 'good'); } } else if (dealt) pop(o, 'pierced', 'info'); break; }
+          for (const ob of obst) { const dx = a.x - ob.x, dy = a.y - ob.y, d = Math.hypot(dx, dy) || 1; if (d < ob.r + 0.1) { const dn = (a.vx * dx + a.vy * dy) / d; if (!a.bounced && dn / sp > -0.6) { a.vx -= 2 * dn * dx / d; a.vy -= 2 * dn * dy / d; a.bounced = true; a.seen = new Set(); a.x = ob.x + dx / d * (ob.r + 0.12); a.y = ob.y + dy / d * (ob.r + 0.12); sfx('block'); sparks(a.x, a.y, 0.8, 0xd8dce4, 4); } else stop = true; } }
+          if (Math.hypot(a.x - C.x, a.y - C.y) > C.R) stop = true;
+          if (stop) { a.dead = true; const rd = Math.hypot(a.x - C.x, a.y - C.y), k = rd > C.R - 0.3 ? (C.R - 0.3) / rd : 1; BW.ground.push({ x: C.x + (a.x - C.x) * k, y: C.y + (a.y - C.y) * k, a: Math.atan2(a.vy, a.vx) }); }
+        }
+        BW.fly = BW.fly.filter(a => !a.dead);
+        for (const q of BW.ground) if (Math.hypot(q.x - K.x, q.y - K.y) < 0.65) { q.got = true; BW.n++; sfx('block'); pop(K, '+1 arrow', 'info'); }
+        BW.ground = BW.ground.filter(q => !q.got);
+      },
+      meter() { return BW.n / 5; },
+      draw() {
+        for (const q of BW.ground) { const x1 = q.x - Math.cos(q.a) * 0.32, y1 = q.y - Math.sin(q.a) * 0.32; sline(Math.round(E.sx(q.x, q.y)), Math.round(E.sy(q.x, q.y, 0)), Math.round(E.sx(x1, y1)), Math.round(E.sy(x1, y1, 0.4)), q.x + q.y + 0.3, 0xd8c8a0, 0, 1); sector(q.x, q.y, 0, 0.3 + 0.05 * Math.sin(time * 5), 7, 0xffe27a, 0.45, 0.07); }
+        const a = BW.aim; if (a && a.pw > 0.02) { const L = 3 + 7 * a.pw; gline(K.x, K.y, K.x + Math.cos(a.dir) * L, K.y + Math.sin(a.dir) * L, a.pw > 0.7 ? 0xffe27a : 0xffffff, true); }
+      },
+      drawTop() { for (const a of BW.fly) { const sp = Math.hypot(a.vx, a.vy), x1 = a.x - a.vx / sp * 0.5, y1 = a.y - a.vy / sp * 0.5; sline(Math.round(E.sx(x1, y1)), Math.round(E.sy(x1, y1, 0.9)), Math.round(E.sx(a.x, a.y)), Math.round(E.sy(a.x, a.y, 0.9)), a.x + a.y + 1.2, 0xe8dcc0, 0xa89a78, 2); } },
+    },
+    whirl: {
+      id: 'whirl', name: 'Greatsword', tokens: 3, extra: 1, w: true, slide: 0.05, slam: true, title: 'Greatsword: spin up like a top',
+      help: ['<b>Flick</b> to wind up a spin; every flick adds more (yellow bar) and shoves him that way', 'While he spins the blade <b>cuts everyone around him</b>, faster and harder the more spin he has', 'A spinning king <b>slides</b> and <b>bounces off rocks and the tree line</b> with a shockwave; <b>hold</b> to steer the slide', 'Spin bleeds away. Come down from a big spin and he is <b>dizzy</b> for a moment', 'Not spinning: <b>hold</b> to walk, <b>tap</b> for a plain cut'],
+      init() { WH = { spin: 0, ang: 0, v: [0, 0], peak: 0, hitAt: new Map(), fxT: 0 }; },
+      down(g) { K.hold = [g.wx, g.wy]; }, move(g) { K.hold = [g.wx, g.wy]; },
+      up(g) {
+        K.hold = null;
+        if (g.el < 0.3 && g.dist > 30 && K.state === 'idle' && K.sta > 8) { spend(13); WH.spin = clamp(WH.spin + (WH.spin < 0 ? -5 : 5), -16, 16); WH.v[0] += Math.cos(g.wdir) * 3.5; WH.v[1] += Math.sin(g.wdir) * 3.5; sfx('swing'); }
+        else if (g.el < 0.22 && g.dist < 14 && Math.abs(WH.spin) < 3 && K.state === 'idle') { const o = nearestEnemy(K.x, K.y, 1.7); if (o) attack(K, Math.atan2(o.y - K.y, o.x - K.x), CUT); }
+      },
+      shock() { const sp = Math.abs(WH.spin); sparks(K.x, K.y, 0.6, 0xffe9a0, 10, 3.5); sfx('block'); shake = Math.max(shake, 4); fx.push({ k: 'sw', x: K.x, y: K.y, face: 0, reach: 1.7, arc: 6.2, t: 0, life: 0.2, col: 0xffe9a0 }); for (const o of F) if (o.team === 1 && o.alive && Math.hypot(o.x - K.x, o.y - K.y) < 1.7 + o.r) hit(o, { x: K.x, y: K.y, team: 0, byK: true }, { dmg: 4 + sp * 1.2, pd: 30, push: 5 }); },
+      kmove(dt) {
+        const sp = Math.abs(WH.spin), v = WH.v;
+        if (sp < 3 || K.state !== 'idle') { const k = Math.pow(0.01, dt); v[0] *= k; v[1] *= k; kingMove(); K.mx += v[0]; K.my += v[1]; return; }
+        if (K.hold) { const dx = K.hold[0] - K.x, dy = K.hold[1] - K.y, d = Math.hypot(dx, dy) || 1; if (d > 0.3) { v[0] += dx / d * 7 * dt; v[1] += dy / d * 7 * dt; } }
+        const k = Math.pow(0.55, dt); v[0] *= k; v[1] *= k; const m = Math.hypot(v[0], v[1]); if (m > 5.5) { v[0] *= 5.5 / m; v[1] *= 5.5 / m; }
+        for (const ob of obst) { const dx = K.x - ob.x, dy = K.y - ob.y, d = Math.hypot(dx, dy) || 1; if (d < ob.r + K.r + 0.06) { const dn = (v[0] * dx + v[1] * dy) / d; if (dn < -0.8) { v[0] -= 1.9 * dn * dx / d; v[1] -= 1.9 * dn * dy / d; this.shock(); } } }
+        const rx = K.x - C.x, ry = K.y - C.y, rd = Math.hypot(rx, ry); if (rd > C.R - 0.05) { const dn = (v[0] * rx + v[1] * ry) / rd; if (dn > 0.8) { v[0] -= 1.9 * dn * rx / rd; v[1] -= 1.9 * dn * ry / rd; this.shock(); } else if (dn > 0) { v[0] -= dn * rx / rd; v[1] -= dn * ry / rd; } }
+        K.mx = v[0]; K.my = v[1];
+      },
+      update(dt) {
+        const w = WH, sp = Math.abs(w.spin); w.spin *= Math.pow(0.62, dt); w.ang += w.spin * dt; w.peak = Math.max(w.peak, sp);
+        if (sp >= 3 && K.state === 'idle') {
+          K.noWeapon = true; K.face = w.ang; const cdn = Math.max(0.24, 2.2 / sp);
+          for (const o of F) if (o.team === 1 && o.alive && Math.hypot(o.x - K.x, o.y - K.y) < 1.55 + o.r && (w.hitAt.get(o) || -9) < time - cdn) { w.hitAt.set(o, time); hit(o, { x: K.x, y: K.y, team: 0 }, { dmg: 2 + sp * 0.7, pd: sp * 2.2, push: 2 + sp * 0.25 }); }
+          w.fxT -= dt; if (w.fxT <= 0) { w.fxT = 0.1; fx.push({ k: 'sw', x: K.x, y: K.y, face: w.ang - (w.spin > 0 ? 0.9 : -0.9), reach: 1.55, arc: 2.2, t: 0.05, life: 0.14, col: 0xffffff }); }
+        } else { K.noWeapon = false; if (w.peak > 10 && sp < 3 && K.state === 'idle') { stagger(K, 0.9); pop(K, 'dizzy', 'hurt'); } if (sp < 3) w.peak = 0; }
+      },
+      meter() { return Math.abs(WH.spin) / 16; },
+      drawTop() { if (Math.abs(WH.spin) < 3 || K.state !== 'idle') return; const tx = K.x + Math.cos(WH.ang) * 1.5, ty = K.y + Math.sin(WH.ang) * 1.5, d = Math.max(K.x + K.y, tx + ty) + 1.3; sline(Math.round(E.sx(K.x, K.y)), Math.round(E.sy(K.x, K.y, 0.8)), Math.round(E.sx(tx, ty)), Math.round(E.sy(tx, ty, 0.8)), d, 0xf4f6fa, 0xa8aebc, 3); },
+    },
+    pots: {
+      id: 'pots', name: 'Fire pots', tokens: 3, extra: 1, w: true, slide: 0.05, slam: true, title: 'Fire pots: lob, wait, boom',
+      help: ['<b>Swipe</b> to lob a pot; a longer swipe throws further', 'It lands, the fuse burns for a moment (red ring), then it <b>blows men outward</b>: into rocks, trees and each other', 'A blast <b>sets off other pots</b> nearby, and one landing by the campfire goes off at once', 'Stand too close and it throws <b>you</b> as well', 'Three pots out at a time. <b>Hold</b> to walk, <b>tap</b> to club someone next to you'],
+      init() { PT = { list: [], scorch: [] }; },
+      down() { }, move: holdMove,
+      up(g) {
+        if (g.el < 0.36 && g.dist > 30) { K.hold = null; if (K.state === 'idle' && K.sta > 10 && PT.list.length < 3) { spend(16); const L = clamp(Math.hypot(g.wx - g.wx0, g.wy - g.wy0) * 1.5, 1.6, 6.5), T = 0.55; PT.list.push({ x: K.x, y: K.y, z: 0.9, vx: Math.cos(g.wdir) * L / T, vy: Math.sin(g.wdir) * L / T, vz: 3.3, land: false, fuse: 0.9 }); K.face = g.wdir; K.swingT = 0; sfx('swing'); } return; }
+        tapMove(g, PUNCH);
+      },
+      boom(p) {
+        p.dead = true; sfx('boom'); shake = Math.max(shake, 9); sparks(p.x, p.y, 0.4, 0xff9a2e, 26, 5); sparks(p.x, p.y, 0.5, 0xffe27a, 14, 3); dust(p.x, p.y, 12); PT.scorch.push({ x: p.x, y: p.y, t: 8 });
+        fx.push({ k: 'sw', x: p.x, y: p.y, face: 0, reach: 2.2, arc: 6.2, t: 0, life: 0.25, col: 0xffb04a });
+        for (const o of F) { if (!o.alive) continue; const dx = o.x - p.x, dy = o.y - p.y, d = Math.hypot(dx, dy) || 0.01;
+          if (o.team === 1 && d < 2.4) { hit(o, { x: p.x, y: p.y, team: 0, byK: true }, { dmg: 26 * (1 - d / 2.8), pd: 40 }); const im = 11 * (1 - d / 2.6) / mass(o); o.kx += dx / d * im; o.ky += dy / d * im; }
+          else if (o === K && d < 1.7) { K.hp -= 6; K.flash = 1; K.kx += dx / d * 9; K.ky += dy / d * 9; pop(K, 'singed 6', 'hurt'); if (K.hp <= 0) die(K); } }
+        for (const q of PT.list) if (q !== p && !q.dead && Math.hypot(q.x - p.x, q.y - p.y) < 2.2) q.fuse = Math.min(q.fuse, q.land ? 0.12 : 0.6);
+      },
+      update(dt) {
+        for (const p of PT.list) {
+          if (!p.land) { p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt; p.vz -= 18 * dt; if (p.z <= 0) { p.z = 0; p.land = true; p.vx = p.vy = 0; dust(p.x, p.y, 4); const rd = Math.hypot(p.x - C.x, p.y - C.y); if (rd > C.R + 1) { p.x = C.x + (p.x - C.x) / rd * (C.R + 1); p.y = C.y + (p.y - C.y) / rd * (C.R + 1); } } }
+          else { p.fuse -= dt; for (const ob of obst) if (ob.fire && Math.hypot(ob.x - p.x, ob.y - p.y) < 1.1) p.fuse = Math.min(p.fuse, 0.05); if (p.fuse <= 0 && !p.dead) this.boom(p); }
+        }
+        PT.list = PT.list.filter(p => !p.dead); for (const q of PT.scorch) q.t -= dt; PT.scorch = PT.scorch.filter(q => q.t > 0);
+      },
+      draw() { for (const q of PT.scorch) sector(q.x, q.y, 0, 1.15, 7, 0x1a1410, 0.4 * Math.min(1, q.t / 2)); for (const p of PT.list) if (p.land) sector(p.x, p.y, 0, 2.3, 7, 0xff3a2a, (Math.floor(time * 12) & 1) ? 0.55 : 0.25, 0.08); },
+      sprites() { return PT.list.map(p => ({ k: p.x + p.y, draw() { const cx = Math.round(E.sx(p.x, p.y)), cy = Math.round(E.sy(p.x, p.y, p.z + 0.12)), d = p.x + p.y + p.z + 0.4; for (let dx = -3; dx <= 3; dx++) E.dark(cx + dx, Math.round(E.sy(p.x, p.y, 0)), p.x + p.y + 0.02, 0.6); for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { if (dx * dx + dy * dy > 11) continue; E.px(cx + dx, cy + dy, d, dx + dy < -2 ? 0xc98a5a : dx + dy > 2 ? 0x6a3e28 : 0x9a5a3a); } rectS(cx - 1, cy - 5, 2, 2, d, 0x3a3038); if (Math.floor(time * 14) & 1) rectS(cx - 1, cy - 7, 2, 2, d, 0xffe27a); else E.px(cx, cy - 6, d, 0xff9a2e); } })); },
+    },
+    lode: {
+      id: 'lode', name: 'Lodestone', tokens: 3, extra: 1, w: true, slide: 0.05, slam: true, title: 'Lodestone: draw them in, hurl them out',
+      help: ['<b>Touch and hold the king</b>: the lodestone <b>drags every armoured man toward him</b> and bends arrows aside', 'The longer you hold, the bigger the charge (gold ring). It drains stamina', '<b>Let go</b> and it <b>hurls everyone inside the ring outward</b>, into rocks, trees, the fire and each other', 'Pull too long and they arrive swinging', '<b>Hold the ground</b> to walk, <b>tap</b> for a plain blow'],
+      init() { LD = { on: false, ch: 0 }; },
+      down(g) { if (g.onKing && K.state === 'idle' && K.sta > 8) { LD.on = true; LD.ch = 0; K.dest = null; K.hold = null; } },
+      move(g) { if (!g.onKing) holdMove(g); },
+      blast() { const l = LD; l.on = false; const R = 2.6 + l.ch; sfx('dash'); shake = Math.max(shake, 4 + 3 * l.ch); fx.push({ k: 'sw', x: K.x, y: K.y, face: 0, reach: R, arc: 6.2, t: 0, life: 0.25, col: 0x8ac8f0 }); for (const o of F) if (o.team === 1 && o.alive && Math.hypot(o.x - K.x, o.y - K.y) < R + o.r) hit(o, { x: K.x, y: K.y, team: 0, byK: true }, { dmg: 4 + 6 * l.ch, pd: 25, push: 9 + 8 * l.ch }); },
+      up(g) { if (g.onKing) { if (LD.on) this.blast(); return; } tapMove(g, CUT); },
+      kmove() { if (LD.on) K.mx = K.my = 0; else kingMove(); },
+      update(dt) {
+        const l = LD; if (!l.on) return; if (K.state !== 'idle') { l.on = false; return; }
+        l.ch = Math.min(1.5, l.ch + dt); K.sta -= 14 * dt; K.staD = 0.5;
+        for (const o of F) if (o.team === 1 && o.alive) { const dx = K.x - o.x, dy = K.y - o.y, d = Math.hypot(dx, dy) || 1; if (d < 6.5 && d > 0.9) { o.kx += dx / d * 15 * dt / mass(o); o.ky += dy / d * 15 * dt / mass(o); } }
+        for (const s of shots) { const dx = s.x - K.x, dy = s.y - K.y, d = Math.hypot(dx, dy) || 1; if (d < 2.8) { s.vx += dx / d * 45 * dt; s.vy += dy / d * 45 * dt; } }
+        if (K.sta <= 0) { K.sta = 0; this.blast(); }
+      },
+      draw() { if (!LD.on) return; for (const ph of [0, 0.5]) { const p = (time * 1.6 + ph) % 1; sector(K.x, K.y, 0, 0.8 + (1 - p) * 4.5, 7, 0x8ac8f0, 0.15 + 0.3 * p, 0.1); } sector(K.x, K.y, 0, 2.6 + LD.ch, 7, 0xffe27a, 0.4, 0.07); },
+    },
   };
   /* ---- time-stop tactics: the swipe scheme, but the world only moves when the king does ---- */
   MODES.still = Object.assign({}, MODES.swipe, { id: 'still', name: 'Time holds', tokens: 3, extra: 1, title: 'Time moves only when you do',
     help: ['The world <b>freezes whenever the king is idle</b>, so you can read the fight and choose', 'Controls are the Swipe scheme: <b>hold</b> to walk, <b>swipe</b> to cut, long swipe to lunge, <b>hold the king</b> to block, swipe from him to roll', 'Time runs while he walks, swings, blocks or rolls; hold your finger still on the ground to let time pass', 'More bandits come at once, since you have time to think'],
     ts() { return (K.hold || K.dest || K.state !== 'idle' || K.buf) ? 1 : 0.04; } });
+  // bodies sliding fast take damage from whatever they run into: rocks, the fire, the tree line, each other
+  function slamBodies(dt) {
+    const slam = (o, s, label, extra) => { o.slamT = 0.3; if (hit(o, { x: o.x + o.kx, y: o.y + o.ky, team: 0, byK: true }, { dmg: s * 2.6 + (extra || 0), pd: s * 8 }) && label) pop(o, label, 'good'); dust(o.x, o.y, 5); };
+    for (const o of F) {
+      if (o.team !== 1 || !o.alive) continue; o.slamT = (o.slamT || 0) - dt; const s = Math.hypot(o.kx, o.ky); if (s < 3.2 || o.slamT > 0) continue;
+      let done = false;
+      for (const ob of obst) { const dx = o.x - ob.x, dy = o.y - ob.y, d = Math.hypot(dx, dy) || 1; if (d < o.r + ob.r + 0.1 && o.kx * dx + o.ky * dy < 0) { slam(o, s, ob.fire ? 'BURNED' : 'SLAM', ob.fire ? 14 : 0); const dot = (o.kx * dx + o.ky * dy) / d; o.kx = (o.kx - 1.6 * dot * dx / d) * 0.45; o.ky = (o.ky - 1.6 * dot * dy / d) * 0.45; done = true; break; } }
+      if (done) continue;
+      const rx = o.x - C.x, ry = o.y - C.y, rd = Math.hypot(rx, ry); if (rd > C.R + 1.2 && o.kx * rx + o.ky * ry > 0) { slam(o, s, 'INTO THE TREES'); o.kx *= -0.3; o.ky *= -0.3; continue; }
+      for (const b of F) if (b !== o && b.team === 1 && b.alive && Math.hypot(b.x - o.x, b.y - o.y) < o.r + b.r + 0.12 && o.kx * (b.x - o.x) + o.ky * (b.y - o.y) > 0) { const m = b.kind === 'brute' ? 2.4 : 1; slam(b, s * 0.7, 'KNOCK-ON'); slam(o, s * 0.4); b.kx += o.kx * 0.65 / m; b.ky += o.ky * 0.65 / m; b.slamT = 0.25; o.kx *= 0.35; o.ky *= 0.35; break; }
+    }
+  }
   function enemyAt(lx, ly) { let b = null, bd = 30; for (const o of F) if (o.team === 1 && o.alive) { const d = Math.hypot(o.p.scrX - lx, o.p.scrY - ly); if (d < bd) { bd = d; b = o; } } return b; }
 
   /* ================= simulation ================= */
@@ -495,7 +634,7 @@
     melee.sort((a, b) => (a.tgt ? Math.hypot(a.x - a.tgt.x, a.y - a.tgt.y) : 99) - (b.tgt ? Math.hypot(b.x - b.tgt.x, b.y - b.tgt.y) : 99));
     melee.forEach((e, i) => { e.eng = mode.id === 'duel' ? e === K.lock : (i < mode.tokens || e.state !== 'idle'); });
     if (!over) {
-      if (mode.kmove) mode.kmove(dt); else kingMove(); if (mode.update) mode.update(dt);
+      if (mode.kmove) mode.kmove(dt); else kingMove(); if (mode.update) mode.update(dt); if (mode.slam) slamBodies(dt);
       if (mode.id === 'duel' && K.holdStop) K.mx = K.my = 0;
       if (K.buf) { K.buf.t -= dt; if (K.state === 'idle') { const b = K.buf; K.buf = null; kingSwing(b.dir, b.heavy); } else if (K.buf.t <= 0) K.buf = null; }
       K.comboT += dt; K.staD -= dt; if (K.staD <= 0 && K.state !== 'block') K.sta = Math.min(100, K.sta + 26 * dt);
@@ -573,11 +712,13 @@
       else if (f.state === 'block') a = 1.9; else if (f.state === 'stag') a = -0.4; else if (f.state === 'roll' && f.dash) a = 0.1;
       const hx = sx + sg * Math.round(5 * sc), hy = sy - Math.round(13 * sc), L = (f.kind === 'brute' ? 17 : f.kind === 'king' ? 15 : 12) * (f.kind === 'brute' ? 1.1 : 1);
       const ex = hx + sg * Math.cos(a) * L, ey = hy - Math.sin(a) * L;
-      if (f === K && K.noWeapon) { } else if (f.kind === 'king' && mode.id !== 'hammer') { sline(hx, hy, ex, ey, d, 0xe4e8f0, 0xa8aebc, 2); rectS(Math.round(hx + sg * Math.cos(a) * 2 - 1), Math.round(hy - Math.sin(a) * 2 - 1), 3, 3, d, 0xe8c84a); }
+      if (f === K && K.noWeapon) { } else if (f === K && mode.id === 'moment') { const fxs = Math.cos(f.face) - Math.sin(f.face), fys = (Math.cos(f.face) + Math.sin(f.face)) * 0.5, n = Math.hypot(fxs, fys) || 1, tx = hx + fxs / n * 24, ty = hy + 3 + fys / n * 24; sline(hx - fxs / n * 9, hy + 3 - fys / n * 9, tx, ty, d, 0x9a7a50, 0x6a4c30, 2); rectS(Math.round(tx) - 1, Math.round(ty) - 1, 3, 3, d, 0xe4e8f0); rectS(Math.round(hx + fxs / n * 15), Math.round(hy + 1 + fys / n * 15), 3, 4, d, 0xb8323a); }
+      else if (f.kind === 'king' && !MACE[mode.id]) { sline(hx, hy, ex, ey, d, 0xe4e8f0, 0xa8aebc, 2); rectS(Math.round(hx + sg * Math.cos(a) * 2 - 1), Math.round(hy - Math.sin(a) * 2 - 1), 3, 3, d, 0xe8c84a); }
       else if (f.kind === 'brute' || f.kind === 'king') { sline(hx, hy, ex, ey, d, 0x7a5636, 0x5a3e28, 3); rectS(Math.round(ex) - 2, Math.round(ey) - 2, 5, 5, d, 0x4a3424); rectS(Math.round(ex) - 1, Math.round(ey) - 1, 2, 2, d, 0x9aa0ac); }
       else { sline(hx, hy, ex, ey, d, 0x8a6a46, 0x6a4c30, 2); rectS(Math.round(hx + sg * Math.cos(a) * (L - 3)) - 1, Math.round(hy - Math.sin(a) * (L - 3)) - 2, 4, 4, d, 0xa8aeb8); }
-    } else if (f.kind === 'archer') {
-      const bx = sx + sg * 7, by = sy - 15, drawn = f.state === 'aim';
+    }
+    if (f.kind === 'archer' || (f === K && mode.id === 'bow')) {
+      const bx = sx + sg * 7, by = sy - 15, drawn = f.state === 'aim' || (f === K && BW.aim);
       for (let i = -6; i <= 6; i++) E.px(bx + sg * Math.round(2 - i * i / 14), by + i, d, 0x7a5636);
       sline(bx + sg * -1, by - 6, bx - sg * (drawn ? 4 : 1), by, d, 0xd8d0c0, 0, 1); sline(bx - sg * (drawn ? 4 : 1), by, bx + sg * -1, by + 6, d, 0xd8d0c0, 0, 1);
       if (drawn) sline(bx - sg * 4, by, bx + sg * 6, by, d, 0xc9b890, 0, 1);
@@ -645,7 +786,7 @@
     G = { id: e.pointerId, x0: e.clientX, y0: e.clientY, t0: performance.now() }; gest(e, G);
     const kx = ((E.sx(K.x, K.y) - camX) * zoom + cv.width / 2) / dpr, ky = ((E.sy(K.x, K.y, 0.7) - camY) * zoom + cv.height / 2) / dpr;
     G.onKing = Math.hypot(e.clientX - kx, e.clientY - ky) < Math.max(34, 24 * zoom / dpr);
-    mode.down(G);
+    G.wx0 = G.wx; G.wy0 = G.wy; mode.down(G);
   });
   cv.addEventListener('pointermove', e => {
     if (!ptr.has(e.pointerId)) return; ptr.set(e.pointerId, [e.clientX, e.clientY]);
@@ -660,7 +801,8 @@
   /* ================= shell ================= */
   function setMode(id) {
     mode = MODES[id]; const el = $('modes'); el.innerHTML = '';
-    for (const k in MODES) { const b = document.createElement('button'); b.textContent = MODES[k].name; if (k === id) b.className = 'on'; b.onclick = () => setMode(k); el.appendChild(b); }
+    for (const w of [true, false]) { const row = document.createElement('div'); row.className = 'grp'; const l = document.createElement('span'); l.className = 'lbl'; l.textContent = w ? 'WEAPONS' : 'OTHER TESTS'; row.appendChild(l);
+      for (const k in MODES) { if (!!MODES[k].w !== w) continue; const b = document.createElement('button'); b.textContent = MODES[k].name; if (k === id) b.className = 'on'; b.onclick = () => setMode(k); row.appendChild(b); } el.appendChild(row); }
     $('help').className = ''; $('help').innerHTML = '<b>' + mode.title + '</b> <i>(tap to hide)</i><ul>' + mode.help.map(h => '<li>' + h + '</li>').join('') + '</ul>';
     try { location.hash = id; } catch (e) { }
     $('hud').style.top = ($('top').offsetHeight + 2) + 'px';
@@ -682,7 +824,7 @@
   $('busy').classList.add('on');
   setTimeout(() => {
     bake(); camX = E.sx(C.x, C.y); camY = E.sy(C.x, C.y, 1);
-    const h = (location.hash || '').slice(1); setMode(MODES[h] ? h : 'swipe');
+    const h = (location.hash || '').slice(1); setMode(MODES[h] ? h : 'moment');
     $('busy').classList.remove('on'); requestAnimationFrame(tick);
     window.__ct = { kscreen: () => [((E.sx(K.x, K.y) - camX) * zoom + cv.width / 2) / dpr, ((E.sy(K.x, K.y, 0.7) - camY) * zoom + cv.height / 2) / dpr], F: () => F, K: () => K, sim, draw, setMode, MODES, kingSwing, state: () => ({ wave, kills, over, n: F.length }) };
   }, 30);

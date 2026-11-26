@@ -43,4 +43,9 @@ release to dash through a line of enemies), plus five genre experiments: **Momen
 weapon), **Hammer throw** (a bouncing, recallable hammer), **Horde** (weapons work on their own, you
 only move), **War drum** (strike on the beat) and **Time holds** (the world moves only when the king
 does), and two physics prototypes: **Ball & chain** (a rope-simulated iron ball) and **Shield bash**
-(shove bodies into rocks, trees, the fire, barrels and each other). All logic is in `hd/js/combat.js`.
+(shove bodies into rocks, trees, the fire, barrels and each other).
+
+The page now groups ten of these as **weapons**: Lance (momentum), Warhammer (throw and recall),
+Dancing blades, War drum, Flail, Chain hook, Longbow (five retrievable piercing arrows), Greatsword
+(spin up like a top), Fire pots and Lodestone (pull everyone in, hurl them out). All logic is in
+`hd/js/combat.js`.
