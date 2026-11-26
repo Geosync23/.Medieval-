@@ -50,3 +50,15 @@ Ball & chain, Chain hook, Longbow (five retrievable piercing arrows), Greatsword
 (spin up like a top), Fire pots and Lodestone (pull everyone in, hurl them out). Two newer ones are
 tagged NEW in the bar: Leap maul and Launcher. All logic is in
 `hd/js/combat.js`.
+
+## Battle test (`hd/battle.html`)
+
+The pixel-art version of the massed battle: England against France, 100 / 200 / 300 a side, in six
+regiments each (swordsmen, spearmen, archers). Regiments march and wheel toward the nearest enemy block,
+then break into individual fights; archers loose arcing volleys. The king takes the field with any of
+the twelve weapons from the combat page, switchable mid-battle.
+
+- `hd/js/battlefield.js` — the battlefield scene (camps at either end, walls, haystacks, pond)
+- `hd/js/troops.js` — pre-rendered soldier sprites, fast enough for 600+ men a frame
+- `hd/js/combat.js` — the battle layer lives here behind the `BATTLE` flag, so weapons are shared
+- `hd/troops-demo.html` — a sprite and battlefield viewer

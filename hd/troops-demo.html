@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>King Simulator — Battlefield + troop sprite demo</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #14111a; overflow: hidden; color: #f1e6c8;
+    font-family: "Courier New", ui-monospace, Menlo, Consolas, monospace; -webkit-user-select: none; user-select: none; }
+  #view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; image-rendering: pixelated; image-rendering: crisp-edges; }
+  #top { position: fixed; top: 0; left: 0; right: 0; display: flex; gap: 6px; padding: 8px; flex-wrap: wrap; align-items: center; pointer-events: none; z-index: 3; }
+  .grp { display: flex; flex-wrap: wrap; pointer-events: auto; box-shadow: 0 3px 0 #0b090e; }
+  button { font: inherit; font-weight: 700; font-size: 11px; letter-spacing: .3px; color: #e9dcb8; background: #3b2f3f; border: 2px solid #1b1520;
+    border-left-width: 0; padding: 7px 8px; cursor: pointer; text-transform: uppercase; box-shadow: inset 0 2px 0 #5a4a5c, inset 0 -3px 0 #2a2030; }
+  .grp button:first-child { border-left-width: 2px; }
+  button.on { background: #c9a04a; color: #2a1c10; box-shadow: inset 0 2px 0 #f0d480, inset 0 -3px 0 #96702a; }
+  #stat { position: fixed; left: 8px; bottom: 8px; z-index: 3; background: rgba(20,17,26,.82); border: 2px solid #1b1520; padding: 6px 10px; font-size: 12px; font-weight: 700; line-height: 1.5; pointer-events: none; white-space: pre; }
+  #busy { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; letter-spacing: 2px; background: rgba(20,17,26,.6); z-index: 6; pointer-events: none; opacity: 0; transition: opacity .12s; }
+  #busy.on { opacity: 1; }
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="top">
+  <div class="grp" id="anims"></div>
+  <div class="grp" id="times"></div>
+  <div class="grp"><button id="reset">Reset</button></div>
+</div>
+<div id="stat"></div>
+<div id="busy">PAINTING…</div>
+<script src="js/engine.js"></script>
+<script src="js/tex.js"></script>
+<script src="js/build.js"></script>
+<script src="js/scenes.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/forest.js"></script>
+<script src="js/battlefield.js"></script>
+<script src="js/troops.js"></script>
+<script>
+'use strict';
+(function () {
+  const cv = document.getElementById('view'), ctx = cv.getContext('2d');
+  const off = document.createElement('canvas'), octx = off.getContext('2d');
+  const BF = Battlefield;
+  let img = null, frame = null, camX = 0, camY = 0, zoom = 1, zoomT = 1, anchor = null, dpr = 1, ready = false, tod = 'day', mode = 'cycle', paused = false;
+  const TIMES = {
+    day: BF.light,
+    dusk: { L: [-0.8, 0.5, 0.36], sun: [1.02, 0.52, 0.22], amb: [0.40, 0.36, 0.60], fill: [0.10, 0.08, 0.14], night: true, lamp: 0.6, bg: [22, 16, 28] },
+    night: { L: [0.5, 0.42, 0.75], sun: [0.14, 0.20, 0.40], amb: [0.15, 0.18, 0.37], fill: [0.03, 0.04, 0.08], night: true, lamp: 1, bg: [10, 10, 20] },
+  };
+  function applyLight() { const t = TIMES[tod], Lt = E.light; Lt.L = E.norm(t.L); Lt.sun = t.sun; Lt.amb = t.amb; Lt.fill = t.fill; Lt.night = t.night; Lt.lampScale = t.lamp; Lt.bg = t.bg; }
+  function bake() {
+    const v = BF.view;
+    E.init(Math.ceil((v.d1 - v.d0) * E.HW), Math.ceil((v.s1 - v.s0) * E.HH + v.z * E.ZS) + 8, Math.round(-v.d0 * E.HW), Math.round(-v.s0 * E.HH + v.z * E.ZS) + 4);
+    B.reset(); BF.build(); applyLight(); E.bake(BF.bounds);
+    off.width = E.W; off.height = E.H; img = octx.createImageData(E.W, E.H); frame = new Uint32Array(img.data.buffer);
+    Troops.relight();
+  }
+
+  /* ---------- the two armies: three blocks of 98 per side ---------- */
+  let units = [], banners = [], time = 0;
+  function deploy() {
+    units = []; banners = []; let id = 0;
+    for (const team of [0, 1]) {
+      const z = team ? BF.zones.fr : BF.zones.en, sg = team ? -1 : 1, front = team ? z.d0 + 3 : z.d1 - 3;
+      const blocks = [['spear', 50.3], ['sword', 57.5], ['bow', 64.7]];
+      blocks.forEach(([kind, s0], bi) => {
+        for (let r = 0; r < 14; r++) for (let c = 0; c < 7; c++) {
+          const d = front - sg * r * 0.9, s = s0 + c * 1.02, [x, y] = BF.W2(d, s);
+          units.push({ id: id++, kind, team, x, y, hx: x, hy: y, z: 0, face: team ? Math.PI * 0.75 : -Math.PI * 0.25, anim: 'idle', phase: (id * 0.37) % 4, t: 0, flash: 0, fade: 0, off: ((id * 7919) % 100) / 100, speed: 0.75 + ((id * 31) % 10) * 0.012 });
+        }
+        const [bx, by] = BF.W2(front - sg * 13.4, s0 + 3); banners.push({ x: bx, y: by, hx: bx, hy: by, team, kind: bi });
+      });
+    }
+  }
+  const SEQ = [['idle', 1.2], ['wind', 0.5], ['swing', 0.4], ['idle', 0.5], ['aim', 0.9], ['swing', 0.35], ['stag', 0.5], ['dead', 1.6], ['dead', 0.9]], SEQT = SEQ.reduce((a, b) => a + b[1], 0);
+  function update(dt) {
+    time += dt;
+    const march = mode === 'cycle' ? Math.min(time, 9) : mode === 'walk' ? time : 0, vx = 0.5, vy = -0.5;   // +d direction in world space
+    for (const u of units) {
+      const sg = u.team ? -1 : 1, adv = march * u.speed * 1.75;
+      u.x = u.hx + sg * vx * adv; u.y = u.hy + sg * vy * adv; u.flash = 0; u.fade = 0; u.z = 0;
+      if (mode === 'walk') { const lim = 15 / 1.75; if (march * u.speed > lim) { u.x = u.hx + sg * vx * 15; u.y = u.hy + sg * vy * 15; u.anim = 'idle'; } else { u.anim = 'walk'; u.phase += dt * u.speed * 5.5; } continue; }
+      if (mode === 'cycle' && time < 9) { u.anim = 'walk'; u.phase += dt * u.speed * 5.5; continue; }
+      if (mode !== 'cycle') { u.anim = mode; u.t = mode === 'dead' ? Math.min(1, ((time * 0.6 + u.off) % 2)) : (time * 1.2 + u.off) % 1; continue; }
+      let tt = (time - 9 + u.off * SEQT) % SEQT, k = 0; while (tt > SEQ[k][1]) { tt -= SEQ[k][1]; k++; }
+      u.anim = SEQ[k][0]; u.t = tt / SEQ[k][1];
+      if (k === 6) { u.flash = Math.max(0, 1 - u.t * 3); u.z = Math.sin(Math.min(1, u.t * 1.4) * Math.PI) * 0.35; }
+      if (k === 7) u.t = Math.min(1, u.t * 2.2); if (k === 8) { u.fade = u.t; u.t = 1; }
+    }
+    for (const b of banners) { const sg = b.team ? -1 : 1, adv = Math.min(march, mode === 'walk' ? 15 / 1.4 : 9) * 0.8 * 1.75; b.x = b.hx + sg * vx * adv; b.y = b.hy + sg * vy * adv; }
+  }
+  let msDraw = 0, msFrame = 0, order = [];
+  function drawTroops() {
+    order = units.slice().sort((a, b) => (a.anim === 'dead' ? -1 : 0) - (b.anim === 'dead' ? -1 : 0) || (a.x + a.y) - (b.x + b.y));
+    const t0 = performance.now();
+    for (let i = 0; i < order.length; i++) Troops.draw(order[i], time);
+    const ms = performance.now() - t0; msDraw += (ms - msDraw) * (msDraw ? 0.05 : 1);
+    for (const b of banners) Troops.banner(b.x, b.y, b.team, time, b.kind);
+    for (const f of BF.flags) Troops.banner(f.x, f.y, f.team, time, f.kind || 0, f.z, f.pole);
+  }
+
+  /* ---------- camera / input (same as the main game) ---------- */
+  const zMin = () => Math.max(0.2, Math.min(cv.width / (E.W || 1), cv.height / (E.H || 1)) * 0.8), zClamp = z => Math.max(zMin(), Math.min(12, z));
+  function setZoom(z, cx, cy) { if (cx === undefined) { cx = innerWidth / 2; cy = innerHeight / 2; } const bx = camX + (cx * dpr - cv.width / 2) / zoom, by = camY + (cy * dpr - cv.height / 2) / zoom; zoom = zClamp(z); camX = bx - (cx * dpr - cv.width / 2) / zoom; camY = by - (cy * dpr - cv.height / 2) / zoom; }
+  function resize() { dpr = Math.min(3, window.devicePixelRatio || 1); cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(innerHeight * dpr); }
+  addEventListener('resize', resize); resize();
+  const ptr = new Map(); let pinch0 = 0, zoom0 = 1, pmx = 0, pmy = 0;
+  cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); ptr.set(e.pointerId, [e.clientX, e.clientY]); if (ptr.size === 2) { const a = [...ptr.values()]; pinch0 = Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1]) || 1; zoom0 = zoom; pmx = (a[0][0] + a[1][0]) / 2; pmy = (a[0][1] + a[1][1]) / 2; } });
+  cv.addEventListener('pointermove', e => {
+    const p = ptr.get(e.pointerId); if (!p) return;
+    const dx = e.clientX - p[0], dy = e.clientY - p[1]; p[0] = e.clientX; p[1] = e.clientY;
+    if (ptr.size === 1) { camX -= dx * dpr / zoom; camY -= dy * dpr / zoom; }
+    else if (ptr.size === 2) { const a = [...ptr.values()], d = Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1]), mx = (a[0][0] + a[1][0]) / 2, my = (a[0][1] + a[1][1]) / 2; camX -= (mx - pmx) * dpr / zoom; camY -= (my - pmy) * dpr / zoom; pmx = mx; pmy = my; setZoom(zoom0 * d / pinch0, mx, my); zoomT = zoom; }
+  });
+  const up = e => ptr.delete(e.pointerId); cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  cv.addEventListener('wheel', e => { e.preventDefault(); zoomT = zClamp(zoomT * Math.exp(-Math.max(-120, Math.min(120, e.deltaY)) * 0.0022)); anchor = [e.clientX, e.clientY]; }, { passive: false });
+
+  /* ---------- UI ---------- */
+  function buttons(id, items, cur, cb) { const el = document.getElementById(id); el.innerHTML = ''; for (const k of items) { const b = document.createElement('button'); b.textContent = k; if (k === cur()) b.className = 'on'; b.onclick = () => { cb(k); buttons(id, items, cur, cb); }; el.appendChild(b); } }
+  function busy(fn) { const el = document.getElementById('busy'); el.classList.add('on'); setTimeout(() => { fn(); el.classList.remove('on'); }, 30); }
+  function ui() {
+    buttons('anims', ['cycle', 'idle', 'walk', 'wind', 'swing', 'aim', 'stag', 'dead'], () => mode, k => { mode = k; time = 0; deploy(); });
+    buttons('times', ['day', 'dusk', 'night'], () => tod, k => { tod = k; busy(() => { applyLight(); E.bake(BF.bounds); Troops.relight(); }); });
+  }
+  document.getElementById('reset').onclick = () => { time = 0; deploy(); };
+  const stat = document.getElementById('stat');
+
+  /* ---------- loop ---------- */
+  let last = performance.now(), statT = 0;
+  function render() {
+    E.begin(frame);
+    if (Sim.fx) for (const f of Sim.fx) f(time);
+    drawTroops();
+    const vw = cv.width / zoom, vh = cv.height / zoom;
+    camX = Math.max(Math.min(vw / 2, E.W / 2), Math.min(Math.max(E.W - vw / 2, E.W / 2), camX));
+    camY = Math.max(Math.min(vh / 2, E.H / 2), Math.min(Math.max(E.H - vh / 2, E.H / 2), camY));
+    const x0 = camX - vw / 2, y0 = camY - vh / 2;
+    const dx0 = Math.max(0, Math.floor(x0)), dy0 = Math.max(0, Math.floor(y0)), dw = Math.min(E.W, Math.ceil(x0 + vw) + 1) - dx0, dh = Math.min(E.H, Math.ceil(y0 + vh) + 1) - dy0;
+    octx.putImageData(img, 0, 0, dx0, dy0, dw, dh);
+    const bg = E.light.bg; ctx.fillStyle = 'rgb(' + bg[0] + ',' + bg[1] + ',' + bg[2] + ')'; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.imageSmoothingEnabled = zoom < 1;
+    ctx.drawImage(off, dx0, dy0, dw, dh, Math.round((dx0 - x0) * zoom), Math.round((dy0 - y0) * zoom), dw * zoom, dh * zoom);
+  }
+  function tick(now) {
+    requestAnimationFrame(tick); if (!ready) return;
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (Math.abs(zoomT - zoom) > zoom * 0.001) { const z = zoom + (zoomT - zoom) * Math.min(1, dt * 12); anchor ? setZoom(z, anchor[0], anchor[1]) : setZoom(z); }
+    if (!paused) update(dt);
+    const t0 = performance.now(); render(); msFrame += (performance.now() - t0 - msFrame) * 0.05;
+    if (now - statT > 400) { statT = now; stat.textContent = units.length + ' soldiers  troop draw ' + msDraw.toFixed(2) + ' ms\nwhole frame ' + msFrame.toFixed(1) + ' ms   buffer ' + E.W + ' x ' + E.H + '\ndrag = pan, wheel / pinch = zoom'; }
+  }
+  // test hooks for the screenshot script
+  window.__td = {
+    cam: (d, s, z) => { const [x, y] = BF.W2(d, s); camX = E.sx(x, y); camY = E.sy(x, y, 0.4); if (z) zoom = zoomT = z; },
+    fit: () => { zoom = zoomT = cv.width / E.W; camX = E.W / 2; camY = E.H / 2; },
+    mode: m => { mode = m; time = 0; deploy(); ui(); }, step: s => { for (let i = 0; i < Math.round(s * 30); i++) update(1 / 30); }, pause: p => { paused = p; },
+    time: k => { tod = k; applyLight(); E.bake(BF.bounds); Troops.relight(); ui(); }, render,
+    units: () => units, setUnits: (u, b) => { units = u; banners = b || []; },
+    bench: (n, reps) => { const us = []; for (let i = 0; i < n; i++) us.push(units[i % units.length]); us.sort((a, b) => (a.x + a.y) - (b.x + b.y)); E.begin(frame); let best = 1e9, tot = 0; for (let r = 0; r < reps; r++) { const t0 = performance.now(); for (let i = 0; i < n; i++) Troops.draw(us[i], time + r * 0.016); const ms = performance.now() - t0; tot += ms; if (ms < best) best = ms; } return { n, best: +best.toFixed(3), mean: +(tot / reps).toFixed(3) }; },
+  };
+  ui();
+  busy(() => { const t0 = performance.now(); Troops.init(); const t1 = performance.now(); bake(); deploy(); console.log('troops init ms', Math.round(t1 - t0), 'bake ms', Math.round(performance.now() - t1), 'buffer', E.W, E.H);
+    zoom = zoomT = Math.max(1, Math.round(Math.min(cv.width, cv.height) / 500)); const k = BF.W2(0, 60); camX = E.sx(k[0], k[1]); camY = E.sy(k[0], k[1], 0); ready = true; requestAnimationFrame(tick); });
+})();
+</script>
+</body>
+</html>

@@ -795,7 +795,7 @@
       if (K.state === 'block') K.blockT += dt;
     }
     for (const f of F) {
-      if (f.state === 'dead') { f.st += dt; if (BATTLE && f !== K) { f.fade = clamp((f.st - 7) / 2, 0, 1); f.p.z = 0; } else { f.fade = Math.min(1, f.st / 0.9); f.p.z = -f.st * 0.25; } continue; }
+      if (f.state === 'dead') { f.st += dt; f.flash = Math.max(0, f.flash - dt * 6); if (BATTLE && f !== K) { f.fade = clamp((f.st - 7) / 2, 0, 1); f.p.z = 0; } else { f.fade = Math.min(1, f.st / 0.9); f.p.z = -f.st * 0.25; } continue; }
       f.cd -= dt; f.flash = Math.max(0, f.flash - dt * 6); f.swingT += dt; if (f.ifr > 0) f.ifr -= dt;
       if (f !== K) { f.poise = Math.min(f.spec.poise, f.poise + dt * 6); if (over) { f.mx = f.my = 0; } else if (BATTLE) aiTroop(f, dt); else if (f.kind === 'knight') aiKnight(f); else if (f.kind === 'archer') aiArcher(f, dt); else aiMelee(f, f.eng); }
       if (f.state !== 'idle' && f.state !== 'block') {
@@ -896,7 +896,8 @@
     if (f === K.focus && mode.id === 'guard') for (let i = 0; i < 3; i++) for (let j = -(2 - i); j <= 2 - i; j++) E.px(sx + j, top - 12 + i - (Math.floor(time * 4) & 1), d + 1, 0xffe27a);
   }
   function draw() {
-    E.begin(frame);
+    if (BATTLE) { const vh = cv.height / zoom, r0 = clamp(Math.floor(camY - vh / 2 - 90), 0, E.H), r1 = clamp(Math.ceil(camY + vh / 2 + 90), 0, E.H); E.frame = frame; frame.set(E.base.subarray(r0 * E.W, r1 * E.W), r0 * E.W); }
+    else E.begin(frame);
     // ground marks
     for (const d of decals) { const x1 = d.x - Math.cos(d.a) * 0.3, y1 = d.y - Math.sin(d.a) * 0.3, ax = Math.round(E.sx(d.x, d.y)), ay = Math.round(E.sy(d.x, d.y, 0)); sline(ax, ay, Math.round(E.sx(x1, y1)), Math.round(E.sy(x1, y1, 0.35)), d.x + d.y + 0.2, 0x8a6a46, 0, 1); }
     for (const f of F) {
@@ -912,8 +913,10 @@
       const t = K.hold || K.dest; if (t && K.state === 'idle') sector(t[0], t[1], 0, 0.28, 7, 0xffe27a, 0.5, 0.08);
     }
     if (mode.draw && !over) mode.draw();
-    const DL = F.map(f => ({ k: f.x + f.y, f })); if (mode.sprites && !over) for (const e of mode.sprites()) DL.push(e);
-    if (BATTLE) { for (const R of REG) if (R.n > 0) DL.push({ k: R.cx + R.cy - 0.4, draw() { Troops.banner(R.cx, R.cy - 0.4, R.team, time, R.kind); } }); drawVolleys(); }
+    const DL = F.map(f => ({ k: BATTLE && !f.alive && f !== K ? -1e6 + f.x + f.y : f.x + f.y, f })); if (mode.sprites && !over) for (const e of mode.sprites()) DL.push(e);
+    if (BATTLE) { for (const R of REG) if (R.n > 0) DL.push({ k: R.cx + R.cy - 0.4, draw() { Troops.banner(R.cx, R.cy - 0.4, R.team, time, R.kind === 'sword' ? 0 : R.kind === 'spear' ? 1 : 2); } });
+      for (const q of Battlefield.flags || []) DL.push({ k: q.x + q.y, draw() { Troops.banner(q.x, q.y, q.team, time, q.kind || 0, q.z, q.pole); } });
+      const vw = cv.width / zoom, vh = cv.height / zoom; Troops.setClip(camX - vw / 2 - 40, camY - vh / 2 - 60, camX + vw / 2 + 40, camY + vh / 2 + 60); drawVolleys(); }
     DL.sort((a, b) => a.k - b.k); for (const e of DL) { if (e.f) drawFighter(e.f); else e.draw(); }
     if (mode.drawTop && !over) mode.drawTop();
     for (const s of shots) { const x0 = Math.round(E.sx(s.x, s.y)), y0 = Math.round(E.sy(s.x, s.y, 0.9)), x1 = Math.round(E.sx(s.x - s.vx * 0.045, s.y - s.vy * 0.045)), y1 = Math.round(E.sy(s.x - s.vx * 0.045, s.y - s.vy * 0.045, 0.9)); sline(x1, y1, x0, y0, s.x + s.y + 1, 0xd8c8a0, 0, 1); E.px(x0, y0, s.x + s.y + 1, 0xe4e8f0); E.dark(Math.round(E.sx(s.x, s.y)), Math.round(E.sy(s.x, s.y, 0)), s.x + s.y, 0.6); }
