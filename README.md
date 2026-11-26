@@ -47,6 +47,6 @@ does), and two physics prototypes: **Ball & chain** (a rope-simulated iron ball)
 
 The page now groups ten of these as **weapons**: Momentum, Hammer throw, Horde, War drum,
 Ball & chain, Chain hook, Longbow (five retrievable piercing arrows), Greatsword
-(spin up like a top), Fire pots and Lodestone (pull everyone in, hurl them out). Five newer ones
-are tagged NEW in the bar: Leap maul, Bolas, Great stone, Sling and Launcher. All logic is in
+(spin up like a top), Fire pots and Lodestone (pull everyone in, hurl them out). Two newer ones are
+tagged NEW in the bar: Leap maul and Launcher. All logic is in
 `hd/js/combat.js`.
