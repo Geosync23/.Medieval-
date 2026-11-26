@@ -62,3 +62,21 @@ the twelve weapons from the combat page, switchable mid-battle.
 - `hd/js/troops.js` — pre-rendered soldier sprites, fast enough for 600+ men a frame
 - `hd/js/combat.js` — the battle layer lives here behind the `BATTLE` flag, so weapons are shared
 - `hd/troops-demo.html` — a sprite and battlefield viewer
+
+## The castle (`hd/castle.html`)
+
+A large explorable castle made of twelve connected areas. Hold to walk, tap to walk to a spot, tap a
+yellow tag to use a door or stair. Walking is height-aware: stairs, wall-walks, tower tops and the keep's
+battlements are all reachable on foot.
+
+- **Outer ward** — gatehouse, barracks, stables, smithy, training yard, climbable watchtower
+- **Inner ward & gardens** — the keep, chapel, staff wing, bath house, formal garden, orchard
+- **Keep** — great hall and kitchens, throne room, royal apartments, battlements; undercroft with the
+  prison, wine cellar, treasury and crypt
+- **Wings** — barracks, staff quarters, bath house and games hall, chapel, council chamber and library,
+  the astronomer's tower
+
+Code: `hd/js/castle.js` (areas, portals, height-aware pathfinding, staff), `hd/js/kit.js` (floors,
+walls, partitions, stairs, curtain walls, towers), `hd/js/furnish.js` (115 pieces of furniture and
+decoration; `hd/furnish-demo.html` is a gallery), `hd/js/castle_ext.js` (courtyards and throne room),
+`hd/js/castle_int.js` (the nine interiors).

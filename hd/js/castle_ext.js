@@ -107,7 +107,7 @@
       use('banner', KX + 5.5, KY + KD + 0.02, 0, { h: 7.6, face: 'y', c: RED, len: 3 }); use('banner', KX + 11.5, KY + KD + 0.02, 0, { h: 7.6, face: 'y', c: RED, len: 3 });
       B.box(KX + 6.6, KY + KD, 0, 3.8, 1.0, 0.16, { side: T.facade, P: CS(3, { band: 0 }), top: Kit.paving }); B.box(KX + 7.0, KY + KD, 0.16, 3.0, 0.6, 0.16, { side: T.facade, P: CS(3, { band: 0 }), top: Kit.paving }); Kit.walk(KX + 6.6, KY + KD, KX + 10.4, KY + KD + 1, 0.16);
       Kit.portal(KX + 8.5, KY + KD + 0.75, 0.16, { to: 'hall', at: 'door', name: 'keep', label: 'The Keep', ex: KX + 8.5, ey: KY + KD + 2 });
-      Kit.portal(KX + KW - 1.6, KY + KD - 1.6, KH, { to: 'royal', at: 'roofstair', name: 'roof', label: 'Down to the royal apartments', ex: KX + KW - 2.8, ey: KY + KD - 2.8 });
+      Kit.portal(KX + 13, KY + KD - 1.3, KH, { to: 'royal', at: 'roofstair', name: 'roof', label: 'Down to the royal apartments', ex: KX + 11.6, ey: KY + KD - 1.3 });
       for (const g of [[KX + 2, KY + KD - 0.8], [KX + 14, KY + KD - 0.8], [KX + KW - 0.8, KY + 3]]) Kit.person({ role: 'guard', name: 'Sentry', at: [g[0], g[1], KH], fixed: [0.5, 1] });
       // ---- chapel ----
       B.house({ x: 25, y: 2.8, w: 9, d: 6, floors: 0, h0: 3.8, base: 'stone', gmat: 'stone', tint: 0xb0aaa0, axis: 'x', roof: T.ROOF_SLATE, jetty: 0, seed: 91, rise: 3.2, chimney: false, gfeat: { k: 'glass', w: 26, h: 56, y: 10 },
@@ -179,7 +179,7 @@
       Kit.stairwell(13.4, 21.6, 2.2, 1.6, 0, '+x'); Kit.portal(14.4, 22.4, 0, { to: 'hall', at: 'up', name: 'down', label: 'Down to the great hall', ex: 12.6, ey: 22.4 });
       Kit.stairs(13.2, 2.4, 2.8, 1.3, '+x', 0, 1.7); Kit.floor(16, 2.4, 17.3, 3.7, flag, 1.7); B.box(16, 2.4, 0, 1.3, 1.3, 1.7, { side: T.facade, P: CS(8, { band: 0 }), noTop: true });
       Kit.portal(16.7, 3.05, 1.7, { to: 'royal', at: 'down', name: 'up', label: 'Up to the royal apartments', ex: 15.6, ey: 3.05 });
-      Kit.portal(3.2, 24.6, 0, { to: 'council', at: 'door', name: 'council', label: 'Council chamber & library', ex: 4.4, ey: 24.0 });
+      Kit.portal(3.0, 21.9, 0, { to: 'council', at: 'door', name: 'council', label: 'Council chamber & library', ex: 3.4, ey: 20.9 });
       // the court
       Kit.person({ role: 'noble', fem: true, name: 'The Queen', at: [7.3, 3.45, 0.82], sit: 0.82, fixed: [0.3, 1] });
       Kit.person({ role: 'monk', name: 'The Chancellor', at: [10.5, 4.6, 0.4], fixed: [-0.2, 1] });
