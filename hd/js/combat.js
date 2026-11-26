@@ -312,7 +312,7 @@
     },
     /* ---- kinetic ARPG: speed is the weapon ---- */
     moment: {
-      id: 'moment', name: 'Lance', tokens: 3, extra: 1, w: true, title: 'Lance: speed is your weapon',
+      id: 'moment', name: 'Momentum', tokens: 3, extra: 1, w: true, title: 'Momentum: speed is your weapon',
       help: ['<b>Hold</b> and the king runs toward your finger, building speed; he keeps his momentum and turns in arcs', 'He <b>cuts down anyone he runs past</b>. The faster he is going, the harder the blow (yellow bar)', 'Men he hits are flung back and <b>bowl over</b> the men behind them', 'Sharp turns and taking a hit bleed speed; let go to coast to a stop', '<b>Tap</b> for a quick jab when you are caught standing'],
       init() { K.vel = [0, 0]; K.hitAt = new Map(); K.lastHp = K.hp; },
       down(g) { K.hold = [g.wx, g.wy]; }, move(g) { K.hold = [g.wx, g.wy]; },
@@ -344,7 +344,7 @@
     },
     /* ---- kinetic: a thrown hammer that bounces and comes back ---- */
     hammer: {
-      id: 'hammer', name: 'Warhammer', tokens: 2, w: true, title: 'Warhammer: throw it, call it back',
+      id: 'hammer', name: 'Hammer throw', tokens: 2, w: true, title: 'Hammer throw: throw it, call it back',
       help: ['<b>Hold the ground</b> to walk, tap to walk to a spot', '<b>Swipe</b> to hurl the hammer; it bounces off rocks and the tree line and strikes everyone it touches', 'It lands and lies there. <b>Tap anywhere</b> to call it back: it hits everything between it and you', 'Catching it sends out a small shockwave', 'While it is out you are unarmed: <b>swipe</b> rolls instead'],
       init() { HM = { out: false }; },
       down() { }, move(g) { if (g.el > 0.17) { g.holding = true; K.hold = [g.wx, g.wy]; K.dest = null; } },
@@ -373,8 +373,8 @@
     },
     /* ---- survivors-like: weapons work on their own, you only move ---- */
     horde: {
-      id: 'horde', name: 'Dancing blades', tokens: 3, extra: 2, w: true, title: 'Dancing blades: they fight, you move',
-      help: ['<b>Hold</b> to move; that is nearly all you do', 'Blades <b>circle the king</b> and cut anyone they touch; he also sweeps around himself every moment or so', 'Each few kills <b>levels him up</b> (yellow bar) with a random boon: more blades, wider orbit, faster sweep…', '<b>Flick</b> to dash out of a tight spot'],
+      id: 'horde', name: 'Horde', tokens: 99, horde: true, w: true, title: 'Horde: just keep moving',
+      help: ['<b>Hold</b> to move; that is nearly all you do', 'Blades <b>circle the king</b> and cut anyone they touch; he also sweeps around himself every moment or so', 'A large rabble pours in from every side', 'Each few kills <b>levels him up</b> (yellow bar) with a random boon: more blades, wider orbit, faster sweep…', '<b>Flick</b> to dash out of a tight spot'],
       init() { HD = { blades: 2, rad: 1.25, spd: 3.6, sweep: 1.3, t: 1, xp: 0, need: 5, k0: 0, hitAt: new Map(), ang: 0 }; },
       down(g) { K.hold = [g.wx, g.wy]; }, move(g) { K.hold = [g.wx, g.wy]; }, up(g) { K.hold = null; if (g.el < 0.3 && g.dist > 40) dodge(g.wdir, 2.1, 18); },
       update(dt) {
@@ -410,7 +410,7 @@
     },
     /* ---- physics: an iron ball on a chain, simulated as a rope ---- */
     flail: {
-      id: 'flail', name: 'Flail', tokens: 3, extra: 1, w: true, title: 'Flail: swing the iron ball',
+      id: 'flail', name: 'Ball & chain', tokens: 3, extra: 1, w: true, title: 'Ball & chain: swing the iron ball',
       help: ['The king swings a <b>heavy iron ball on a chain</b>; it is real rope physics', '<b>Hold</b> to move. While he is on the move he keeps the ball <b>whirling round him</b>; walk the circle into the enemy', 'The ball hurts whatever it hits, <b>harder the faster it is moving</b> (yellow bar)', '<b>Tap</b> to yank the ball back toward you, through anyone in the way', '<b>Flick</b> to dash; the chain snaps the ball after you'],
       init() { FL = { p: [], hitAt: new Map(), sp: 0 }; for (let i = 0; i < 8; i++) FL.p.push({ x: K.x, y: K.y + i * 0.1, px: K.x, py: K.y + i * 0.1 }); K.noWeapon = true; },
       down(g) { K.hold = [g.wx, g.wy]; }, move(g) { K.hold = [g.wx, g.wy]; },

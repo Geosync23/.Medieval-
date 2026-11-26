@@ -45,7 +45,7 @@ only move), **War drum** (strike on the beat) and **Time holds** (the world move
 does), and two physics prototypes: **Ball & chain** (a rope-simulated iron ball) and **Shield bash**
 (shove bodies into rocks, trees, the fire, barrels and each other).
 
-The page now groups ten of these as **weapons**: Lance (momentum), Warhammer (throw and recall),
-Dancing blades, War drum, Flail, Chain hook, Longbow (five retrievable piercing arrows), Greatsword
+The page now groups ten of these as **weapons**: Momentum, Hammer throw, Horde, War drum,
+Ball & chain, Chain hook, Longbow (five retrievable piercing arrows), Greatsword
 (spin up like a top), Fire pots and Lodestone (pull everyone in, hurl them out). All logic is in
 `hd/js/combat.js`.
