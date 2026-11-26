@@ -127,7 +127,7 @@ Castle.add = (id, def) => { def.id = id; Castle.areas[id] = def; };
       } else K.p.moving = false;
     } else follow(K, dt);
     // portals
-    if (arrived && Math.hypot(K.x - arrived.x, K.y - arrived.y) > arrived.r + 0.5) arrived = null;
+    if (arrived && Math.hypot(K.x - arrived.x, K.y - arrived.y) > arrived.r + 0.25) arrived = null;
     if (!busyN) for (const p of cur.portals) { if (p === arrived || !p.to) continue; if (Math.abs(K.z - p.z) < 0.6 && Math.hypot(K.x - p.x, K.y - p.y) < p.r) { if (p.to === cur.id) { const q = cur.portals.find(r => r.name === p.at); if (q) { const n = nearest(q.ex === undefined ? q.x : q.ex, q.ey === undefined ? q.y : q.ey, q.z, 2); K.x = n[0]; K.y = n[1]; K.z = n[2]; K.path = null; K.hold = null; arrived = q; camX = E.sx(K.x, K.y); camY = E.sy(K.x, K.y, K.z); } } else enter(p.to, p.at); break; } }
     // staff: wander between the places their job uses
     for (const s of staff) {

@@ -65,7 +65,19 @@ the twelve weapons from the combat page, switchable mid-battle.
 
 ## The castle (`hd/castle.html`)
 
-There are two layouts. **Layout 2** (`hd/castle.html`, `hd/js/castle_ext.js`) is the current one: an
+There are three layouts. **Layout 3** (`hd/castle.html`) is the current one and is **Euclidean**:
+the whole castle is one master plan in one coordinate system (`hd/js/site.js`). Every building has a
+real footprint and real storey heights. Outdoors it is drawn closed; when the king walks in, the same
+world is drawn again with that building cut open at his storey, so each room sits exactly inside the
+walls you saw from outside, and every door and stair is at the same world position on both sides.
+An L-shaped keep (north range: staff quarters, council and library, royal apartments; west range:
+undercroft prison and cellars, great hall and kitchens, throne room; a round great tower of four
+floors at the corner with a stair to its roof) wraps the great court; the lower bailey (barracks,
+smithy, stables, drill ground, gatehouse) lies east and the garden terrace (chapel, bath house, maze,
+pond, orchard) south. Room contents are in `hd/js/rooms.js` and `hd/js/room_throne.js`, the grounds in
+`hd/js/site_out.js`.
+
+**Layout 2** (`hd/castle_v2.html`, `hd/js/castle_ext_v2.js`) is the previous design, kept for reference: an
 L-shaped keep (a pitched royal range and a flat-roofed great hall range meeting at a great round tower)
 spread over three outdoor areas: the great court, a long lower bailey with a terrace and grand stair,
 and a garden terrace with the chapel, cloister, hedge maze, lily pond and orchard. **Layout 1**

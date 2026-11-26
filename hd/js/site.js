@@ -44,14 +44,14 @@ const Site = {}, Rooms = {};
   const DOORS = [
     ['court', 'N0', 27, 15, 0, 'y', 'North range', 'Great court'],
     ['court', 'W0', 15, 26, 0, 'x', 'Great hall', 'Great court'],
-    ['court', 'W1', 15, 31.2, 3.2, 'x', 'Throne room', 'Great court'],
+    ['court', 'W1', 15, 31.2, 3.2, 'x', 'Throne room', 'Great court', 0.8],        // last number: how far outside the trigger stands (the landing is small)
     ['N0', 'T0', 14.45, 9.5, 0, 'x', 'Great tower', 'North range'], ['N1', 'T1', 14.45, 9.5, 3.2, 'x', 'Great tower', 'North range'], ['N2', 'T2', 14.45, 9.5, 6.4, 'x', 'Great tower', 'Royal apartments'],
     ['W0', 'T0', 9.5, 14.45, 0, 'y', 'Great tower', 'Great hall'], ['W1', 'T1', 9.5, 14.45, 3.2, 'y', 'Great tower', 'Throne room'],
     ['bailey', 'BK0', 60, 25.6, 0, 'y', 'Barracks', 'Lower bailey'],
     ['garden', 'CH0', 11, 62.6, 0, 'y', 'Chapel', 'Garden terrace'],
     ['garden', 'RC0', 29, 54.6, 0, 'y', 'Bath house & games hall', 'Garden terrace'],
     ['bailey', 'court', 42.75, 28, 0, 'x', 'Great court', 'Lower bailey'],
-    ['garden', 'court', 28, 42.75, 0, 'y', 'Great court', 'Garden terrace'],
+    ['garden', 'court', 18.5, 42.75, 0, 'y', 'Great court', 'Garden terrace'],
   ];
   // flights of stairs: [lower area, upper area, x, y, w, d, direction it rises, z0, z1]
   const STAIRS = [
@@ -65,7 +65,7 @@ const Site = {}, Rooms = {};
       const A = d[0] === id, Bb = d[1] === id; if (!A && !Bb) continue;
       const x = d[2], y = d[3], z = d[4], ax = d[5], s = A ? 1 : -1;       // A stands on the + side (outside), B on the - side
       // the trigger sits just on my side of the threshold; I arrive a little further in on the other side
-      const o = A ? 1.5 : -0.9, e = A ? 2.4 : -1.9, tx = ax === 'x' ? x + o : x, ty = ax === 'y' ? y + o : y, ex = ax === 'x' ? x + e : x, ey = ax === 'y' ? y + e : y;
+      const o = A ? (d[8] || 1.5) : -0.9, e = A ? 2.65 : -2.1, tx = ax === 'x' ? x + o : x, ty = ax === 'y' ? y + o : y, ex = ax === 'x' ? x + e : x, ey = ax === 'y' ? y + e : y;
       Kit.portal(tx, ty, z, { to: A ? d[1] : d[0], at: 'd' + DOORS.indexOf(d), name: 'd' + DOORS.indexOf(d), label: A ? d[6] : d[7], r: R, ex, ey });
     }
     for (const s of STAIRS) {
@@ -74,7 +74,7 @@ const Site = {}, Rooms = {};
       const topX = ax === 'x' ? (up ? x + w - 0.35 : x + 0.35) : x + w / 2, topY = ax === 'y' ? (up ? y + d - 0.35 : y + 0.35) : y + d / 2;      // head of the flight
       const offX = ax === 'x' ? (up ? x + w + 0.7 : x - 0.7) : x + w / 2, offY = ax === 'y' ? (up ? y + d + 0.7 : y - 0.7) : y + d / 2;          // floor just beyond the head
       if (lo) { Kit.stairs(x, y, w, d, dir, z0, z1); Kit.portal(topX, topY, z1 - 0.1, { to: s[1], at: nm, name: nm, label: 'Up ↑', r: 0.45, ex: topX, ey: topY }); }
-      if (hi) { if (s[1] !== 'court') Kit.stairwell(x, y, w, d, z1, dir); Kit.portal(offX, offY, z1, { to: s[0], at: nm, name: nm, label: 'Down ↓', r: 0.45, ex: offX + (ax === 'x' ? (up ? 0.8 : -0.8) : 0), ey: offY + (ax === 'y' ? (up ? 0.8 : -0.8) : 0) }); if (s[1] !== 'court') B.block(x, y, w, d, z1); }
+      if (hi) { if (s[1] !== 'court') Kit.stairwell(x, y, w, d, z1, dir); Kit.portal(offX, offY, z1, { to: s[0], at: nm, name: nm, label: 'Down ↓', r: 0.45, ex: offX + (ax === 'y' ? 1.25 : 0), ey: offY + (ax === 'x' ? 1.25 : 0) }); if (s[1] !== 'court') B.block(x, y, w, d, z1); }
     }
   }
   // where on a wall a doorway is, as [from, to] along the wall (for gaps in stubs and features on back walls)
@@ -99,13 +99,13 @@ const Site = {}, Rooms = {};
     const fac = FAC[id]();
     if (a.open && a.open[0] === 'T' && (id === 'N' || id === 'W')) {   // the tower stands behind both ranges: slice them at the king's storey so he can be seen
       const cut = BLD.T.floors[KEYS[a.open][1]] + 0.9;
-      B.box(b.x0, b.y0, 0, w, d, cut, { side: T.facade, Px: fac.Px, Py: fac.Py, top: T.flat(0x2a2630) }); B.block(b.x0, b.y0, w, d, 0); return;
+      B.box(b.x0, b.y0, 0, w, d, cut, { side: T.facade, Px: fac.Px, Py: fac.Py, top: (s, t) => T.mul(Kit.paving(s * 0.5 + b.x0, t * 0.5 + b.y0), 0.42) }); B.block(b.x0, b.y0, w, d, 0); return;
     }
     if (open < 0) {                                             // ---- closed ----
       B.box(b.x0, b.y0, base, w, d, b.top - base, { side: T.facade, Px: fac.Px, Py: fac.Py, noTop: id !== 'W', top: (s, t) => Kit.paving(s + b.x0, t + b.y0) });
       B.block(b.x0, b.y0, w, d, 0);
       if (id === 'W') { Kit.merlons('x', b.y1 - 0.22, b.x0, b.x1, b.top, 0.22); Kit.merlons('x', b.y0, b.x0, b.x1, b.top, 0.22); Kit.merlons('y', b.x1 - 0.22, b.y0, b.y1, b.top, 0.22); Kit.merlons('y', b.x0, b.y0, b.y1, b.top, 0.22); Kit.walk(b.x0 + 0.24, b.y0 + 0.24, b.x1 - 0.24, b.y1 - 0.24, b.top);
-        for (let i = 0; i < 4; i++) { const y = b.y1 - (0.17 + i * 0.16) * d; B.box(b.x1, y - 0.3, 0, 0.5, 0.6, 6.4, { side: T.facade, P: CS(84, { band: 0 }), top: T.flat(0xb4ad9e) }); } }
+        for (let i = 0; i < 4; i++) { const y = [28.9, 23.4, 20.2, 17.2][i]; B.box(b.x1, y - 0.3, 0, 0.5, 0.6, 6.4, { side: T.facade, P: CS(84, { band: 0 }), top: T.flat(0xb4ad9e) }); } }
       else if (id === 'N') { B.gable(b.x0, b.y0, b.top, w, d, 3.6, 'x', { P: { pal: T.ROOF_SLATE, seed: 4 }, GP: stoneP(72, { gfeat: { k: 'glass', w: 22, h: 48, y: 10 } }), ov: 0.3 });
         for (const dp of [0.12, 0.3, 0.58, 0.76, 0.92]) { const dx = b.x0 + w * dp - 0.6, dy = b.y0 + d * 0.5, dz = b.top + 3.6 * 0.16; B.box(dx, dy, dz, 1.2, d * 0.3, 0.9, { side: T.facade, P: stoneP(73, { band: 0, quoin: false, feats: [{ k: 'awin', x: 0.5, y: 6, w: 12, h: 22, frame: 0x4a4038, sill: 0xc4bcaa }] }), noTop: true }); B.gable(dx, dy, dz + 0.9, 1.2, d * 0.3, 0.6, 'y', { P: { pal: T.ROOF_SLATE, seed: 5 }, GP: stoneP(74, { band: 0, quoin: false }), ov: 0.12 }); }
         for (const cx of [b.x0 + 6, b.x0 + 18]) { B.box(cx, b.y0 + 3.6, b.top, 0.7, 0.7, 4.8, { side: T.facade, P: CS(76, { band: 0, tint: 0x9a6a58 }) }); B.smokes.push([cx + 0.35, b.y0 + 3.95, b.top + 5.1]); } }
