@@ -54,7 +54,16 @@
     for (let i = 0; i < 40; i++) B.flies.push([4 + h2(i, 41) * 16, 4 + h2(i, 42) * 16, 0.5 + h2(i, 43) * 1.6, i]);
   }
   const LIGHT = { L: [-0.45, 0.75, 0.8], sun: [0.98, 0.86, 0.54], amb: [0.42, 0.48, 0.56], fill: [0.14, 0.13, 0.11], night: false, lamp: 0.25, bg: [20, 17, 26] };
+  const BATTLE = !!window.BATTLE;      // battle.html: armies on the battlefield instead of bandit waves
   function bake() {
+    if (BATTLE) {
+      const v = Battlefield.view; E.init(Math.ceil((v.d1 - v.d0) * HW), Math.ceil((v.s1 - v.s0) * HH + v.z * E.ZS) + 8, Math.round(-v.d0 * HW), Math.round(-v.s0 * HH + v.z * E.ZS) + 4);
+      B.reset(); Battlefield.build(); obst.length = 0; for (const o of Battlefield.obst) obst.push(o);
+      const Lt = E.light, Lg = Object.assign({}, LIGHT, { amb: [0.5, 0.52, 0.66], sun: [0.84, 0.7, 0.46], lamp: 0.15 }, Battlefield.light || {}); Lt.L = E.norm(Lg.L); Lt.sun = Lg.sun; Lt.amb = Lg.amb; Lt.fill = Lg.fill; Lt.night = false; Lt.lampScale = Lg.lamp; Lt.bg = LIGHT.bg;
+      E.bake(Battlefield.bounds); Troops.init();
+      const f = Battlefield.field, c = Battlefield.W2((f.d0 + f.d1) / 2, (f.s0 + f.s1) / 2); C.x = c[0]; C.y = c[1]; C.R = 1e4;
+      off.width = E.W; off.height = E.H; img = octx.createImageData(E.W, E.H); frame = new Uint32Array(img.data.buffer); return;
+    }
     const b = BOUNDS, W = Math.ceil((b[2] + b[3]) * HW), H = Math.ceil((b[2] + b[3]) * HH + b[4] * E.ZS) + 8;
     E.init(W, H, Math.round(b[3] * HW), Math.round(b[4] * E.ZS) + 4);
     B.reset(); buildArena();
@@ -82,6 +91,9 @@
     knight: { hp: 95, speed: 2.5, poise: 80, r: 0.34, atk: { wind: 0.34, reach: 1.35, arc: 1.5, dmg: 13, pd: 18, rec: 0.5, cd: 1.25 } },
     bandit: { hp: 52, speed: 2.05, poise: 42, r: 0.34, atk: { wind: 0.5, reach: 1.15, arc: 1.5, dmg: 11, pd: 16, rec: 0.55, cd: 1.5 } },
     rabble: { hp: 26, speed: 2.3, poise: 20, r: 0.3, atk: { wind: 0.45, reach: 1.05, arc: 1.5, dmg: 6, pd: 10, rec: 0.5, cd: 1.3 } },
+    sword: { hp: 60, speed: 2.0, poise: 45, r: 0.3, atk: { wind: 0.45, reach: 1.15, arc: 1.4, dmg: 12, pd: 16, rec: 0.5, cd: 1.4 } },
+    spear: { hp: 55, speed: 1.85, poise: 50, r: 0.3, atk: { wind: 0.55, reach: 1.7, arc: 0.9, dmg: 13, pd: 20, rec: 0.6, cd: 1.7 } },
+    bow: { hp: 36, speed: 2.0, poise: 28, r: 0.3, atk: { wind: 0.45, reach: 1.0, arc: 1.4, dmg: 6, pd: 8, rec: 0.5, cd: 1.5 } },
     archer: { hp: 34, speed: 2.1, poise: 30, r: 0.32, shot: { aim: 0.9, cd: 3.0, dmg: 10 } },
     brute: { hp: 150, speed: 1.5, poise: 130, r: 0.46, scale: 1.35, atk: { wind: 0.95, reach: 1.65, arc: 2.3, dmg: 26, pd: 46, rec: 0.9, cd: 2.5, heavy: true } },
   };
@@ -96,9 +108,10 @@
     else if (kind === 'brute') { p.top = 0x6a4a36; p.hair = 0x2a2429; p.bot = 0x4a3a2e | 2; p.scale = 1.35; p.skin = SKIN[2]; }
     return p;
   }
+  let uid = 1;
   function mk(kind, x, y, team, i) {
     const s = KINDS[kind];
-    return { kind, spec: s, team, x, y, mx: 0, my: 0, kx: 0, ky: 0, face: team ? Math.atan2(C.y - y, C.x - x) : -2.3, state: 'idle', st: 0, cd: 0.6 + rnd(), r: s.r, hp: s.hp, max: s.hp, poise: s.poise, flash: 0, fade: 0, alive: true, p: look(kind, i), orb: rnd(), dir: rnd() < 0.5 ? 1 : -1, n: 0, think: 0, tgt: null, ifr: 0, blockT: 0, swingT: 9 };
+    return { id: uid++, kind, spec: s, team, x, y, mx: 0, my: 0, kx: 0, ky: 0, face: team ? Math.atan2(C.y - y, C.x - x) : -2.3, state: 'idle', st: 0, cd: 0.6 + rnd(), r: s.r, hp: s.hp, max: s.hp, poise: s.poise, flash: 0, fade: 0, alive: true, p: look(kind, i), orb: rnd(), dir: rnd() < 0.5 ? 1 : -1, n: 0, think: 0, tgt: null, ifr: 0, blockT: 0, swingT: 9 };
   }
   const WAVES = [[['bandit', 3]], [['bandit', 3], ['archer', 1]], [['bandit', 2], ['archer', 2], ['brute', 1]], [['bandit', 4], ['archer', 2], ['brute', 1]], [['bandit', 4], ['archer', 2], ['brute', 2]]];
   function spawnWave() {
@@ -114,7 +127,9 @@
   function reset() {
     F = []; shots = []; fx = []; decals = []; wave = 0; waveT = 1.2; over = false; kills = 0; slow = 1; hitStop = 0; $('pops').innerHTML = '';
     K = mk('king', C.x + 1.5, C.y + 2.5, 0); K.sta = 100; K.staD = 0; K.combo = 0; K.comboT = 9; K.dest = null; K.hold = null; K.buf = null; K.lock = null; K.focus = null; K.planted = 0; K.stance = 0;
+    if (BATTLE) { K.x = Battlefield.king[0]; K.y = Battlefield.king[1]; K.face = -0.785; K.hp = K.max = 260; }
     F.push(K); K.noWeapon = false; if (mode.init) mode.init();
+    if (BATTLE) { spawnArmies(); $('bal').style.display = 'none'; $('msg').classList.remove('on'); say('Deploy', 'Pick a weapon, then press FIGHT', 2600); return; }
     if (mode.knights) for (let i = 0; i < 3; i++) { const a = -2.3 + (i - 1) * 0.9, k = mk('knight', K.x + Math.cos(a) * 1.5, K.y + Math.sin(a) * 1.5, 0, i); k.slot = i; F.push(k); }
     $('bal').style.display = mode.id === 'duel' ? 'block' : 'none'; $('wave').textContent = ''; allies();
     $('msg').classList.remove('on');
@@ -141,7 +156,8 @@
   }
   function stagger(f, t) { if (!f.alive) return; f.state = 'stag'; f.st = t; f.mx = f.my = 0; f.poise = 0; }
   function die(f, by) {
-    f.alive = false; f.state = 'dead'; f.st = 0; f.mx = f.my = 0; sfx('die'); dust(f.x, f.y, 8);
+    f.alive = false; f.state = 'dead'; f.st = 0; f.mx = f.my = 0; const loud = !BATTLE || f === K || by === K || (by && by.byK); if (loud) sfx('die'); dust(f.x, f.y, BATTLE ? 3 : 8);
+    if (BATTLE) { if (f.team === 1 && loud) kills++; if (f === K) { over = true; slow = 1; say('The king has fallen', 'Tap to fight again'); } return; }
     if (f.team === 1) { kills++; $('wave').textContent = 'Wave ' + wave + '   ·   felled ' + kills; } else if (f.kind === 'knight') { pop(f, f.p.name + ' has fallen', 'hurt'); allies(); }
     if (f === K) { over = true; slow = 1; say('The king has fallen', 'Tap to try again'); }
   }
@@ -166,8 +182,9 @@
     o.hp -= dmg; o.flash = 1; o.poise -= pd; o.kx -= Math.cos(from) * (fin ? 5 : 2.4); o.ky -= Math.sin(from) * (fin ? 5 : 2.4);
     if (spec.launch && o.alive) { if (o.kind === 'brute') stagger(o, 0.6); else { o.air = o.airT = 1.0; stagger(o, 1.2); pop(o, 'launched', 'info'); } }
     if (spec.push) { const m = o.kind === 'brute' ? 2.4 : 1; o.kx -= Math.cos(from) * spec.push / m; o.ky -= Math.sin(from) * spec.push / m; }
-    pop(o, fin && (f === K || f.byK) ? 'FINISHER ' + dmg : '' + dmg, o.team === 0 ? 'hurt' : fin ? 'good' : '');
-    sparks(o.x, o.y, 0.9, o.team === 0 ? 0xff6a5a : 0xffe9a0, fin ? 14 : 7); sfx(o === K ? 'hurt' : 'hit');
+    const loud = !BATTLE || f === K || f.byK || o === K;
+    if (loud) { pop(o, fin && (f === K || f.byK) ? 'FINISHER ' + dmg : '' + dmg, o.team === 0 ? 'hurt' : fin ? 'good' : ''); sparks(o.x, o.y, 0.9, o.team === 0 ? 0xff6a5a : 0xffe9a0, fin ? 14 : 7); sfx(o === K ? 'hurt' : 'hit'); }
+    else if (rnd() < 0.3) sparks(o.x, o.y, 0.9, 0xffe9a0, 2);
     if (f === K || f.byK || o === K) { shake = Math.max(shake, o === K ? 5 : fin ? 6 : 2.5); if (f === K || f.byK) hitStop = Math.max(hitStop, fin ? 0.13 : 0.05); }
     if (o.kind === 'knight') allies();
     if (o.hp <= 0) die(o, f);
@@ -178,7 +195,7 @@
   function resolve(f) {
     const s = f.atk; let n = 0;
     for (const o of F) { if (o.team === f.team || !o.alive) continue; const dx = o.x - f.x, dy = o.y - f.y, d = Math.hypot(dx, dy); if (d < s.reach + o.r && adiff(Math.atan2(dy, dx), f.face) < s.arc / 2) { if (hit(o, f, s)) n++; else n += 0.001; } }
-    fx.push({ k: 'sw', x: f.x, y: f.y, face: f.face, reach: s.reach, arc: s.arc, t: 0, life: 0.2, col: f.team ? 0xffb0a0 : 0xffffff });
+    if (!BATTLE || f === K) fx.push({ k: 'sw', x: f.x, y: f.y, face: f.face, reach: s.reach, arc: s.arc, t: 0, life: 0.2, col: f.team ? 0xffb0a0 : 0xffffff });
     if (f === K) { sfx('swing'); if (mode.onSwing) mode.onSwing(s); }
     if (n === 0 && s.heavy && mode.id === 'duel' && f !== K) { f.poise -= f.spec.poise * 0.6; pop(f, 'whiff!', 'good'); if (f.poise <= 0) { stagger(f, 1.8); pop(f, 'OFF BALANCE', 'good'); return; } }
     f.state = 'rec'; f.st = s.rec; f.swingT = 0;
@@ -655,6 +672,99 @@
   }
   function enemyAt(lx, ly) { let b = null, bd = 30; for (const o of F) if (o.team === 1 && o.alive) { const d = Math.hypot(o.p.scrX - lx, o.p.scrY - ly); if (d < bd) { bd = d; b = o; } } return b; }
 
+  /* ================= battle: armies, regiments, volleys ================= */
+  let REG = [], vol = [], phase = 'deploy', armyN = 200, counts = [0, 0], cntT = 0, GRID = new Map(), kSwarm = 0;
+  const GC = 1.5, gkey = (x, y) => ((x / GC) | 0) * 4096 + ((y / GC) | 0);
+  function addReg(team, kind, n, dC, sC, files) {
+    const fw = team ? [-0.7071, 0.7071] : [0.7071, -0.7071], c = Battlefield.W2(dC, sC);
+    const R = { team, kind, units: [], ax: c[0], ay: c[1], fw, sd: [-fw[1], fw[0]], tgt: null, t: rnd() * 0.5, n, cx: c[0], cy: c[1], inRange: false };
+    for (let i = 0; i < n; i++) { const ox = -((i / files) | 0) * 0.78, oy = (i % files - (files - 1) / 2) * 0.78, u = mk(kind, c[0] + fw[0] * ox + R.sd[0] * oy, c[1] + fw[1] * ox + R.sd[1] * oy, team, i); u.reg = R; u.ox = ox; u.oy = oy; u.face = Math.atan2(fw[1], fw[0]); u.free = false; u.noT = 0; u.melee = false; u.think = rnd() * 0.4; u.cd = 0.5 + rnd() * 2; R.units.push(u); F.push(u); }
+    REG.push(R);
+  }
+  function spawnArmies() {
+    REG = []; vol = []; phase = 'deploy'; uid = 2; const f = Battlefield.field, mid = (f.s0 + f.s1) / 2, N = armyN;
+    for (const team of [0, 1]) {
+      const sg = team ? 1 : -1, Nt = team ? Math.round(N * 1.1) : N, nb = Math.round(Nt * 0.3 / 2), nm = Math.round((Nt - nb * 2) / 4), order = team && rnd() < 0.5 ? ['spear', 'sword', 'sword', 'spear'] : ['sword', 'spear', 'spear', 'sword'], deep = team && rnd() < 0.4;
+      order.forEach((k, i) => addReg(team, k, nm, sg * (13 + (deep && (i === 1 || i === 2) ? 5 : 0)), mid + (i - 1.5) * 5.9, 5));
+      const bowsFwd = team && rnd() < 0.3; for (const w of [-1, 1]) addReg(team, 'bow', nb, sg * (bowsFwd ? 10 : 13 + Math.ceil(nm / 5) * 1.15 + 2.5), mid + w * (bowsFwd ? 10.5 : 5.5), 6);
+    }
+    updateCounts();
+  }
+  function updateCounts() { counts = [0, 0]; for (const f of F) if (f.alive && f !== K) counts[f.team]++; $('wave').textContent = 'England ' + counts[0] + '   ·   France ' + counts[1] + '   ·   felled by the king ' + kills; const b = $('army'); if (b) b.firstChild.style.width = (counts[0] / Math.max(1, counts[0] + counts[1]) * 100) + '%'; }
+  function clampField(f) { const b = Battlefield.field, d = clamp(f.x - f.y, b.d0, b.d1), s = clamp(f.x + f.y, b.s0, b.s1); f.x = (s + d) / 2; f.y = (s - d) / 2; }
+  function nearestFoe(f, R) {
+    let best = null, bd = R * R; const cx = (f.x / GC) | 0, cy = (f.y / GC) | 0, n = Math.ceil(R / GC);
+    for (let gx = cx - n; gx <= cx + n; gx++) for (let gy = cy - n; gy <= cy + n; gy++) { const l = GRID.get(gx * 4096 + gy); if (!l) continue; for (const o of l) { if (o.team === f.team) continue; if (o === K && kSwarm >= 7 && f.tgt !== K) continue; const dx = o.x - f.x, dy = o.y - f.y, d = dx * dx + dy * dy; if (d < bd) { bd = d; best = o; } } }
+    return best;
+  }
+  function friendNear(o, R) { const cx = (o.x / GC) | 0, cy = (o.y / GC) | 0; for (let gx = cx - 1; gx <= cx + 1; gx++) for (let gy = cy - 1; gy <= cy + 1; gy++) { const l = GRID.get(gx * 4096 + gy); if (l) for (const q of l) if (q.team !== o.team && Math.hypot(q.x - o.x, q.y - o.y) < R) return true; } return false; }
+  function battleThink(dt) {
+    GRID.clear(); kSwarm = 0;
+    for (const f of F) { if (!f.alive) continue; const k = gkey(f.x, f.y); let l = GRID.get(k); if (!l) GRID.set(k, l = []); l.push(f); if (f.tgt === K && f.team === 1) kSwarm++; }
+    for (const R of REG) { let n = 0, sx = 0, sy = 0, fr = 0; for (const u of R.units) if (u.alive) { n++; sx += u.x; sy += u.y; if (u.free) fr++; } R.n = n; if (n) { R.cx = sx / n; R.cy = sy / n; } R.freeFrac = n ? fr / n : 1; }
+    cntT -= dt; if (cntT <= 0) { cntT = 0.3; updateCounts(); if (phase === 'fight' && !over) { if (!counts[1]) { over = true; say('England has the field', 'Tap to fight again'); sfx('wave'); } else if (!counts[0]) { over = true; say('France has the field', 'Tap to fight again'); } } }
+    if (phase !== 'fight') return;
+    for (const R of REG) {
+      if (!R.n) continue; R.t -= dt;
+      if (R.t <= 0 || !R.tgt || !R.tgt.n) { R.t = 0.6; let b = null, bd = 1e9; for (const Q of REG) if (Q.team !== R.team && Q.n) { const d = Math.hypot(Q.cx - R.cx, Q.cy - R.cy) + (Q.kind === 'bow' && R.kind !== 'bow' ? 4 : 0); if (d < bd) { bd = d; b = Q; } } R.tgt = b; }
+      if (!R.tgt) continue;
+      const dx = R.tgt.cx - R.ax, dy = R.tgt.cy - R.ay, d = Math.hypot(dx, dy) || 1, stopD = R.kind === 'bow' ? 13 : 1.2; R.inRange = d < 15.5;
+      if (R.freeFrac > 0.5) { R.ax += (R.cx - R.ax) * dt; R.ay += (R.cy - R.ay) * dt; }
+      else if (d > stopD) { R.ax += dx / d * 1.45 * dt; R.ay += dy / d * 1.45 * dt; const a = Math.atan2(dy, dx), ca = Math.atan2(R.fw[1], R.fw[0]); let df = a - ca; while (df > Math.PI) df -= TAU; while (df < -Math.PI) df += TAU; const na = ca + clamp(df, -0.5 * dt, 0.5 * dt); R.fw = [Math.cos(na), Math.sin(na)]; R.sd = [-R.fw[1], R.fw[0]]; }
+    }
+  }
+  function aiTroop(f, dt) {
+    f.mx = f.my = 0; const R = f.reg, A = f.spec.atk;
+    if (f.air > 0 && mode.id !== 'bat') { f.air = 0; f.p.z = 0; }
+    if (f.state === 'aim') { if (f.st <= 0) { const T = f.aimAt, dx = T[0] - f.x, dy = T[1] - f.y, d = Math.hypot(dx, dy); vol.push({ sx: f.x, sy: f.y, tx: T[0], ty: T[1], t: 0, T: Math.max(0.5, d / 11), h: d * 0.2, team: f.team }); f.state = 'rec'; f.st = 0.4; f.atk = null; f.swingT = 9; f.cd = (f.team ? 4.6 : 3.4) * (0.8 + rnd() * 0.4); } return; }
+    if (f.state !== 'idle' || phase !== 'fight') return;
+    f.think -= dt;
+    if (f.think <= 0 || (f.tgt && !f.tgt.alive)) { f.think = 0.3 + rnd() * 0.25; const t = nearestFoe(f, f.free ? 8 : f.kind === 'bow' ? 2.6 : 4.5); f.tgt = t; if (t) f.free = true; else if (f.kind === 'bow' && !f.melee) f.free = false; }
+    const t = f.tgt;
+    if (t && t.alive) {
+      const dx = t.x - f.x, dy = t.y - f.y, d = Math.hypot(dx, dy) || 1, sp = f.spec.speed; f.face = Math.atan2(dy, dx);
+      if (d > A.reach * 0.85 + t.r) { f.mx = dx / d * sp; f.my = dy / d * sp; } else if (f.cd <= 0) { attack(f, f.face, A); f.cd = A.cd * (0.8 + rnd() * 0.4); }
+      return;
+    }
+    if (f.kind === 'bow' && !f.free && R.tgt && R.inRange) {
+      f.face = Math.atan2(R.tgt.cy - f.y, R.tgt.cx - f.x);
+      if (f.cd <= 0) { const us = R.tgt.units; let o = null; for (let k = 0; k < 6 && !o; k++) { const c = us[(rnd() * us.length) | 0]; if (c.alive && Math.hypot(c.x - f.x, c.y - f.y) < 17 && (!c.free || !friendNear(c, 1.8))) o = c; } if (!o && ++f.noT > 6) { f.melee = f.free = true; } if (o) { f.noT = 0; f.state = 'aim'; f.st = 0.7; f.aimAt = [o.x + o.mx * 1.2 + (rnd() - 0.5) * 1.6, o.y + o.my * 1.2 + (rnd() - 0.5) * 1.6]; f.face = Math.atan2(o.y - f.y, o.x - f.x); } else f.cd = 0.6; }
+      const gxp = R.ax + R.fw[0] * f.ox + R.sd[0] * f.oy, gyp = R.ay + R.fw[1] * f.ox + R.sd[1] * f.oy, dx = gxp - f.x, dy = gyp - f.y, d = Math.hypot(dx, dy); if (d > 0.4) { const sp = Math.min(f.spec.speed, d * 3); f.mx = dx / d * sp; f.my = dy / d * sp; }
+      return;
+    }
+    // no one to fight: keep formation, or (once loose) head for the nearest enemy block
+    let gxp, gyp; if (f.free && R.tgt) { gxp = R.tgt.cx; gyp = R.tgt.cy; } else { gxp = R.ax + R.fw[0] * f.ox + R.sd[0] * f.oy; gyp = R.ay + R.fw[1] * f.ox + R.sd[1] * f.oy; }
+    const dx = gxp - f.x, dy = gyp - f.y, d = Math.hypot(dx, dy);
+    if (d > 0.15) { const sp = Math.min(f.spec.speed, d * 3 + 0.4); f.mx = dx / d * sp; f.my = dy / d * sp; if (d > 0.5) f.face = Math.atan2(dy, dx); else f.face = Math.atan2(R.fw[1], R.fw[0]); }
+  }
+  function gridSeparate() {
+    for (const [k, l] of GRID) { const cx = (k / 4096) | 0, cy = k % 4096;
+      for (const a of l) { if (!a.alive || a.ifr > 0) continue;
+        for (let gx = cx - 1; gx <= cx + 1; gx++) for (let gy = cy - 1; gy <= cy + 1; gy++) { const m = gx === cx && gy === cy ? l : GRID.get(gx * 4096 + gy); if (!m) continue;
+          for (const b of m) { if (b.id <= a.id || !b.alive || b.ifr > 0) continue; const dx = b.x - a.x, dy = b.y - a.y, rr = a.r + b.r; if (dx > rr || dx < -rr || dy > rr || dy < -rr) continue; const d = Math.hypot(dx, dy); if (d < rr && d > 1e-4) { const p = (rr - d) / 2, wa = a === K ? 0.25 : b === K ? 1.75 : 1; a.x -= dx / d * p * wa; a.y -= dy / d * p * wa; b.x += dx / d * p * (2 - wa); b.y += dy / d * p * (2 - wa); } } } } }
+  }
+  function volleys(dt) {
+    for (const a of vol) {
+      a.t += dt; if (a.t < a.T) continue; a.dead = true;
+      if (mode.id === 'lode' && LD.on && a.team === 1 && Math.hypot(a.tx - K.x, a.ty - K.y) < 3) continue;
+      if (obst.some(o => Math.hypot(a.tx - o.x, a.ty - o.y) < o.r)) continue;
+      let best = null, bd = 0.6; const l = [], cx = (a.tx / GC) | 0, cy = (a.ty / GC) | 0; for (let gx = cx - 1; gx <= cx + 1; gx++) for (let gy = cy - 1; gy <= cy + 1; gy++) { const m = GRID.get(gx * 4096 + gy); if (m) for (const o of m) if (o.alive && o.team !== a.team) { const d = Math.hypot(o.x - a.tx, o.y - a.ty); if (d < bd) { bd = d; best = o; } } }
+      if (best) hit(best, { x: a.sx, y: a.sy, team: a.team }, { dmg: 15, pd: 10, arrow: true }); else if (decals.length < 160) decals.push({ x: a.tx, y: a.ty, a: Math.atan2(a.ty - a.sy, a.tx - a.sx), t: 7 });
+    }
+    vol = vol.filter(a => !a.dead);
+  }
+  function drawVolleys() {
+    for (const a of vol) { const u = a.t / a.T, u0 = Math.max(0, u - 0.035), P = q => { const x = a.sx + (a.tx - a.sx) * q, y = a.sy + (a.ty - a.sy) * q, z = 1 + 4 * a.h * q * (1 - q) - q; return [Math.round(E.sx(x, y)), Math.round(E.sy(x, y, z)), x + y + z + 1]; }, p1 = P(u), p0 = P(u0); sline(p0[0], p0[1], p1[0], p1[1], p1[2], 0xe8dcc0, 0, 1); E.px(p1[0], p1[1], p1[2], 0xf4f6fa); }
+  }
+  function battleUI() {
+    const top = $('top'), g = document.createElement('div'); g.className = 'grp'; top.insertBefore(g, top.children[1]);
+    const mkb = (txt, fn, cls) => { const b = document.createElement('button'); b.textContent = txt; if (cls) b.className = cls; b.onclick = fn; g.appendChild(b); return b; };
+    const fb = mkb('Fight!', () => { if (phase === 'deploy' && !over) { phase = 'fight'; say('To battle!', '', 1200); sfx('wave'); } }, 'on');
+    for (const n of [100, 200, 300]) { const b = mkb(n + ' a side', () => { armyN = n; for (const c of g.children) if (c.dataset.n) c.className = +c.dataset.n === n ? 'on' : ''; reset(); }); b.dataset.n = n; if (n === armyN) b.className = 'on'; }
+    $('restart').textContent = 'New battle';
+    const bar = document.createElement('div'); bar.className = 'meter'; bar.id = 'army'; bar.innerHTML = '<b style="background:linear-gradient(#d8414f,#a8322e)"></b>'; bar.style.background = '#3a5a9a'; bar.style.height = '8px'; $('hud').insertBefore(bar, $('wave'));
+  }
+
   /* ================= simulation ================= */
   function kingMove() {
     K.mx = K.my = 0; K.holdStop = false;
@@ -669,8 +779,9 @@
   }
   function sim(dt) {
     time += dt; if (msgT < 1e8) { msgT -= dt; if (msgT <= 0) $('msg').classList.remove('on'); }
-    const live = F.filter(f => f.alive && f.team === 1);
-    if (!over && live.length === 0) { waveT -= dt; if (waveT <= 0) { if (wave > 0) { K.hp = Math.min(K.max, K.hp + 25); for (const k of F) if (k.kind === 'knight' && k.alive) k.hp = Math.min(k.max, k.hp + 30); allies(); } spawnWave(); waveT = 2.2; } }
+    const live = BATTLE ? [] : F.filter(f => f.alive && f.team === 1);
+    if (BATTLE) battleThink(dt);
+    else if (!over && live.length === 0) { waveT -= dt; if (waveT <= 0) { if (wave > 0) { K.hp = Math.min(K.max, K.hp + 25); for (const k of F) if (k.kind === 'knight' && k.alive) k.hp = Math.min(k.max, k.hp + 30); allies(); } spawnWave(); waveT = 2.2; } }
     // who is allowed to press the attack
     const melee = live.filter(e => e.kind !== 'archer');
     for (const e of live) { e.think -= dt; if (e.think <= 0 || !e.tgt || !e.tgt.alive) { e.think = 0.4; let b = null, bd = 1e9; for (const o of F) if (o.team === 0 && o.alive) { const d = Math.hypot(o.x - e.x, o.y - e.y) * (o === K ? 0.8 : 1); if (d < bd) { bd = d; b = o; } } e.tgt = b; } }
@@ -684,9 +795,9 @@
       if (K.state === 'block') K.blockT += dt;
     }
     for (const f of F) {
-      if (f.state === 'dead') { f.st += dt; f.fade = Math.min(1, f.st / 0.9); f.p.z = -f.st * 0.25; continue; }
+      if (f.state === 'dead') { f.st += dt; if (BATTLE && f !== K) { f.fade = clamp((f.st - 7) / 2, 0, 1); f.p.z = 0; } else { f.fade = Math.min(1, f.st / 0.9); f.p.z = -f.st * 0.25; } continue; }
       f.cd -= dt; f.flash = Math.max(0, f.flash - dt * 6); f.swingT += dt; if (f.ifr > 0) f.ifr -= dt;
-      if (f !== K) { f.poise = Math.min(f.spec.poise, f.poise + dt * 6); if (over) { f.mx = f.my = 0; } else if (f.kind === 'knight') aiKnight(f); else if (f.kind === 'archer') aiArcher(f, dt); else aiMelee(f, f.eng); }
+      if (f !== K) { f.poise = Math.min(f.spec.poise, f.poise + dt * 6); if (over) { f.mx = f.my = 0; } else if (BATTLE) aiTroop(f, dt); else if (f.kind === 'knight') aiKnight(f); else if (f.kind === 'archer') aiArcher(f, dt); else aiMelee(f, f.eng); }
       if (f.state !== 'idle' && f.state !== 'block') {
         f.st -= dt;
         if (f.state === 'wind') { const l = f.atk.lunge || 0; if (l) { f.kx = 0; f.ky = 0; f.x += Math.cos(f.face) * l / f.atk.wind * dt; f.y += Math.sin(f.face) * l / f.atk.wind * dt; } if (f.st <= 0) resolve(f); }
@@ -702,10 +813,11 @@
       // integrate, collide
       const kb = Math.pow(mode.slide && f !== K ? mode.slide : 0.0008, dt); f.x += (f.mx + f.kx) * dt; f.y += (f.my + f.ky) * dt; f.kx *= kb; f.ky *= kb;
       for (const o of obst) { const dx = f.x - o.x, dy = f.y - o.y, d = Math.hypot(dx, dy), m = o.r + f.r; if (d < m && d > 1e-4) { f.x = o.x + dx / d * m; f.y = o.y + dy / d * m; } }
+      if (BATTLE) clampField(f);
       const lim = f.team === 0 ? C.R : C.R + 1.6, cd = Math.hypot(f.x - C.x, f.y - C.y); if (cd > lim) { f.x = C.x + (f.x - C.x) / cd * lim; f.y = C.y + (f.y - C.y) / cd * lim; }
       const sp = Math.hypot(f.mx, f.my); f.p.moving = sp > 0.25 && f.state === 'idle'; if (f.p.moving) f.p.phase += dt * sp * 2.7;
     }
-    for (let i = 0; i < F.length; i++) for (let j = i + 1; j < F.length; j++) {
+    if (BATTLE) gridSeparate(); else for (let i = 0; i < F.length; i++) for (let j = i + 1; j < F.length; j++) {
       const a = F[i], b = F[j]; if (!a.alive || !b.alive || a.ifr > 0 || b.ifr > 0) continue;
       const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy), m = a.r + b.r; if (d < m && d > 1e-4) { const p = (m - d) / 2; a.x -= dx / d * p; a.y -= dy / d * p; b.x += dx / d * p; b.y += dy / d * p; }
     }
@@ -718,7 +830,8 @@
         hit(o, { x: s.x - s.vx, y: s.y - s.vy, team: s.by.team }, { dmg: 10, pd: 8, arrow: true }); s.dead = true; break;
       }
     }
-    shots = shots.filter(s => !s.dead); F = F.filter(f => !(f.state === 'dead' && f.st > 1.0 && f !== K && f.kind !== 'knight'));
+    shots = shots.filter(s => !s.dead); F = F.filter(f => !(f.state === 'dead' && f.st > (BATTLE ? 9 : 1.0) && f !== K && f.kind !== 'knight'));
+    if (BATTLE) volleys(dt);
     for (const d of decals) d.t -= dt; decals = decals.filter(d => d.t > 0);
     for (const e of fx) { e.t += dt; if (e.k === 'sp') { e.x += e.vx * dt; e.y += e.vy * dt; e.z += e.vz * dt; e.vz -= (e.dustp ? 1.5 : 12) * dt; if (e.z < 0) { e.z = 0; e.vz *= -0.3; } } }
     fx = fx.filter(e => { if (e.t < e.life) return true; if (e.el) e.el.remove(); return false; });
@@ -743,6 +856,13 @@
   function sline(x0, y0, x1, y1, d, c, c2, th) { const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) | 0 || 1; for (let i = 0; i <= n; i++) { const x = Math.round(x0 + (x1 - x0) * i / n), y = Math.round(y0 + (y1 - y0) * i / n); E.px(x, y, d, c); if (th > 1) E.px(x + 1, y, d, c2); if (th > 2) { E.px(x, y + 1, d, c2); E.px(x + 1, y + 1, d, c2); } } }
   function rectS(x, y, w, h, d, c) { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) E.px(x + i, y + j, d, c); }
   function drawFighter(f) {
+    if (BATTLE && f !== K) {
+      f.anim = !f.alive ? 'dead' : f.state === 'wind' ? 'wind' : (f.state === 'rec' && f.swingT < 0.2) ? 'swing' : f.state === 'aim' ? 'aim' : f.state === 'stag' ? 'stag' : f.p.moving ? 'walk' : 'idle';
+      f.t = !f.alive ? Math.min(1, f.st / 0.5) : f.state === 'wind' ? 1 - f.st / f.atk.wind : f.state === 'rec' ? Math.min(1, f.swingT / 0.2) : f.state === 'aim' ? 1 - f.st / 0.7 : 0;
+      f.phase = f.p.phase; f.z = f.p.z || 0; Troops.draw(f, time); f.p.scrX = f.scrX; f.p.scrY = f.scrY; f.p.scrTop = f.scrTop;
+      if (f.alive && f.state === 'stag' && f.team === 1) for (let i = 0; i < 2; i++) { const a = time * 6 + i * 3.14; rectS(f.scrX + Math.round(Math.cos(a) * 7), f.scrTop - 2 + Math.round(Math.sin(a) * 3), 2, 2, f.x + f.y + 2, 0xffe27a); }
+      return;
+    }
     const p = f.p; p.x = f.x; p.y = f.y; p.fx = Math.cos(f.face); p.fy = Math.sin(f.face); p.flash = f.flash; p.fade = f.fade;
     if (f.state === 'stag') p.flash = Math.max(p.flash, 0.25 + 0.2 * Math.sin(time * 20));
     Sim.drawPerson(p, time);
@@ -781,6 +901,7 @@
     for (const d of decals) { const x1 = d.x - Math.cos(d.a) * 0.3, y1 = d.y - Math.sin(d.a) * 0.3, ax = Math.round(E.sx(d.x, d.y)), ay = Math.round(E.sy(d.x, d.y, 0)); sline(ax, ay, Math.round(E.sx(x1, y1)), Math.round(E.sy(x1, y1, 0.35)), d.x + d.y + 0.2, 0x8a6a46, 0, 1); }
     for (const f of F) {
       if (!f.alive) continue;
+      if (BATTLE && (f.tgt !== K || Math.hypot(f.x - K.x, f.y - K.y) > 3)) continue;
       if (f.team === 1 && f.state === 'wind') sector(f.x, f.y, f.face, f.atk.reach, f.atk.arc, f.atk.heavy ? 0xff3a2a : 0xff8a4a, 0.2 + 0.4 * (1 - f.st / f.atk.wind));
       if (f.state === 'aim') gline(f.x, f.y, f.x + Math.cos(f.face) * 8, f.y + Math.sin(f.face) * 8, f.st < 0.25 ? 0xff3a2a : 0xffb08a, true);
     }
@@ -792,6 +913,7 @@
     }
     if (mode.draw && !over) mode.draw();
     const DL = F.map(f => ({ k: f.x + f.y, f })); if (mode.sprites && !over) for (const e of mode.sprites()) DL.push(e);
+    if (BATTLE) { for (const R of REG) if (R.n > 0) DL.push({ k: R.cx + R.cy - 0.4, draw() { Troops.banner(R.cx, R.cy - 0.4, R.team, time, R.kind); } }); drawVolleys(); }
     DL.sort((a, b) => a.k - b.k); for (const e of DL) { if (e.f) drawFighter(e.f); else e.draw(); }
     if (mode.drawTop && !over) mode.drawTop();
     for (const s of shots) { const x0 = Math.round(E.sx(s.x, s.y)), y0 = Math.round(E.sy(s.x, s.y, 0.9)), x1 = Math.round(E.sx(s.x - s.vx * 0.045, s.y - s.vy * 0.045)), y1 = Math.round(E.sy(s.x - s.vx * 0.045, s.y - s.vy * 0.045, 0.9)); sline(x1, y1, x0, y0, s.x + s.y + 1, 0xd8c8a0, 0, 1); E.px(x0, y0, s.x + s.y + 1, 0xe4e8f0); E.dark(Math.round(E.sx(s.x, s.y)), Math.round(E.sy(s.x, s.y, 0)), s.x + s.y, 0.6); }
@@ -802,7 +924,8 @@
     }
     if (Sim.fx) for (const f of Sim.fx) f(time);
     // camera: centred on the clearing, leaning toward the king
-    const tx = E.sx(C.x, C.y) * 0.65 + E.sx(K.x, K.y) * 0.35, ty = E.sy(C.x, C.y, 1) * 0.65 + E.sy(K.x, K.y, 1) * 0.35; camX += (tx - camX) * 0.08; camY += (ty - camY) * 0.08;
+    const cw = BATTLE ? 0 : 0.65, tx = E.sx(C.x, C.y) * cw + E.sx(K.x, K.y) * (1 - cw), ty = E.sy(C.x, C.y, 1) * cw + E.sy(K.x, K.y, 1) * (1 - cw); camX += (tx - camX) * 0.08; camY += (ty - camY) * 0.08;
+    if (BATTLE) { const hw = cv.width / zoom / 2, hh = cv.height / zoom / 2; camX = clamp(camX, Math.min(hw, E.W / 2), Math.max(E.W - hw, E.W / 2)); camY = clamp(camY, Math.min(hh, E.H / 2), Math.max(E.H - hh, E.H / 2)); }
     const shx = shake > 0.2 ? (rnd() - 0.5) * shake : 0, shy = shake > 0.2 ? (rnd() - 0.5) * shake : 0; shake *= 0.86;
     const vw = cv.width / zoom, vh = cv.height / zoom, x0 = camX + shx - vw / 2, y0 = camY + shy - vh / 2;
     const dx0 = Math.max(0, Math.floor(x0)), dy0 = Math.max(0, Math.floor(y0)), dw = Math.min(E.W, Math.ceil(x0 + vw) + 1) - dx0, dh = Math.min(E.H, Math.ceil(y0 + vh) + 1) - dy0;
@@ -844,17 +967,18 @@
   /* ================= shell ================= */
   function setMode(id) {
     mode = MODES[id]; const el = $('modes'); el.innerHTML = '';
-    for (const w of [true, false]) { const row = document.createElement('div'); row.className = 'grp'; const l = document.createElement('span'); l.className = 'lbl'; l.textContent = w ? 'WEAPONS' : 'OTHER TESTS'; row.appendChild(l);
+    for (const w of BATTLE ? [true] : [true, false]) { const row = document.createElement('div'); row.className = 'grp'; const l = document.createElement('span'); l.className = 'lbl'; l.textContent = w ? 'WEAPONS' : 'OTHER TESTS'; row.appendChild(l);
       for (const k in MODES) { if (!!MODES[k].w !== w) continue; const b = document.createElement('button'); b.textContent = MODES[k].name; b.className = (k === id ? 'on ' : '') + (MODES[k].isNew ? 'new' : ''); b.onclick = () => setMode(k); row.appendChild(b); } el.appendChild(row); }
     $('help').className = ''; $('help').innerHTML = '<b>' + mode.title + '</b> <i>(tap to hide)</i><ul>' + mode.help.map(h => '<li>' + h + '</li>').join('') + '</ul>';
     try { location.hash = id; } catch (e) { }
     $('hud').style.top = ($('top').offsetHeight + 2) + 'px';
+    if (BATTLE && K && !over) { K.noWeapon = false; K.hold = K.dest = K.aim = null; K.hop = 0; if (K.state !== 'stag') K.state = 'idle'; if (mode.init) mode.init(); return; }
     reset();
   }
   $('help').onclick = () => $('help').classList.toggle('min');
   $('restart').onclick = () => reset();
   $('snd').onclick = () => { sound = !sound; $('snd').textContent = sound ? 'Sound off' : 'Sound on'; };
-  function resize() { dpr = Math.min(3, window.devicePixelRatio || 1); cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(innerHeight * dpr); if (!resize.done) { zoom = clamp(Math.min(cv.width / 720, cv.height / 600), 0.8, 6); resize.done = true; } }
+  function resize() { dpr = Math.min(3, window.devicePixelRatio || 1); cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(innerHeight * dpr); if (!resize.done) { zoom = clamp(Math.min(cv.width / (BATTLE ? 900 : 720), cv.height / 600), 0.8, 6); resize.done = true; } }
   addEventListener('resize', resize); resize();
   let last = 0;
   function tick(now) {
@@ -866,9 +990,9 @@
   }
   $('busy').classList.add('on');
   setTimeout(() => {
-    bake(); camX = E.sx(C.x, C.y); camY = E.sy(C.x, C.y, 1);
+    bake(); camX = E.sx(C.x, C.y); camY = E.sy(C.x, C.y, 1); if (BATTLE) battleUI();
     const h = (location.hash || '').slice(1); setMode(MODES[h] ? h : 'moment');
     $('busy').classList.remove('on'); requestAnimationFrame(tick);
-    window.__ct = { BD: () => BD, ST: () => ST, kscreen: () => [((E.sx(K.x, K.y) - camX) * zoom + cv.width / 2) / dpr, ((E.sy(K.x, K.y, 0.7) - camY) * zoom + cv.height / 2) / dpr], F: () => F, K: () => K, sim, draw, setMode, MODES, kingSwing, state: () => ({ wave, kills, over, n: F.length }) };
+    window.__ct = { reset: () => reset(), REG: () => REG, fight: () => { phase = 'fight'; }, phase: () => phase, counts: () => counts, BD: () => BD, ST: () => ST, kscreen: () => [((E.sx(K.x, K.y) - camX) * zoom + cv.width / 2) / dpr, ((E.sy(K.x, K.y, 0.7) - camY) * zoom + cv.height / 2) / dpr], F: () => F, K: () => K, sim, draw, setMode, MODES, kingSwing, state: () => ({ wave, kills, over, n: F.length }) };
   }, 30);
 })();
