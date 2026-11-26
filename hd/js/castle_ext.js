@@ -43,7 +43,7 @@
       // gatehouse on the near wall: twin turrets and a raised walk between them
       Kit.block(17.2, 37.6, 2.2, 3.4, 4.4, { seed: 60, fy: [slit(0.5, 90)] }); Kit.block(21.6, 37.6, 2.2, 3.4, 4.4, { seed: 62, fy: [slit(0.5, 90)] });
       B.box(19.4, 38.4, 0, 2.2, 1.6, 4.4, { side: T.facade, Py: CS(64, { feats: [arch(0.5, 44, 86, false)] }), top: Kit.paving }); Kit.walk(19.4, 38.6, 21.6, 39.8, 4.4); B.block(19.4, 38.4, 2.2, 1.6, 0);
-      use('banner', 18.3, 41.0, 4.0, { face: 'y', c: RED }); use('banner', 22.7, 41.0, 4.0, { face: 'y', c: RED });
+      use('banner', 18.3, 41.0, 0, { h: 4.0, face: 'y', c: RED }); use('banner', 22.7, 41.0, 0, { h: 4.0, face: 'y', c: RED });
       Kit.portal(20.5, 37.6, 0, { name: 'gate', label: 'Village gate (to come)', r: 0.6 });
       Kit.portal(4.5, 31.5, 0, { to: 'inner', at: 'gate', name: 'innergate', label: 'Inner ward', ex: 6, ey: 31.5 });
       // barracks against the back wall
@@ -53,16 +53,16 @@
       // stables against the left wall
       B.house({ x: 3.9, y: 10.5, w: 4.2, d: 9.5, floors: 0, h0: 1.8, base: 'timber', axis: 'y', roof: T.ROOF_BROWN, rise: 1.9, chimney: false, plaster: 0xa88a60, seed: 85,
         fx: [{ k: 'shop', x: 0.2, w: 40, h: 46, trim: 0x5a4030, lamp: false }, { k: 'shop', x: 0.52, w: 40, h: 46, trim: 0x5a4030, lamp: false }, { k: 'shop', x: 0.84, w: 40, h: 46, trim: 0x5a4030, lamp: false }] });
-      use('horse', 9.0, 12.4, 0, { face: 'x' }); use('hayBale', 8.6, 18.4, 0, {}); use('hayBale', 8.8, 19.3, 0, {}); use('waterTrough', 8.7, 15.2, 0, { face: 'x' }); use('saddleRack', 8.6, 21.0, 0, { face: 'x' });
+      use('horse', 9.4, 12.6, 0, { face: 'x', coat: 'bay' }); use('horse', 9.4, 17.2, 0, { face: 'x', coat: 'grey' }); use('hayBale', 8.5, 20.4, 0, { n: 3 }); use('hayBale', 9.5, 20.6, 0, {}); use('trough', 8.6, 14.4, 0, { face: 'x' }); use('saddleRack', 8.6, 22.2, 0, { face: 'x' }); B.pois.push({ x: 10.4, y: 13.4, z: 0, kind: 'stable', fx: -1, fy: 0 }, { x: 10.4, y: 17.6, z: 0, kind: 'stable', fx: -1, fy: 0 });
       // smithy
       B.house({ x: 29.5, y: 3.9, w: 5.5, d: 4.2, floors: 0, h0: 2.0, base: 'stone', axis: 'x', roof: T.ROOF_BROWN, rise: 1.8, seed: 88, tint: 0x8a7a6a, fy: [{ k: 'open', x: 0.4, w: 36, h: 50, trim: 0x6a5a4a, lit: true, lamp: false }, win(0.82, { box: false })] });
       if (!use('anvil', 31.2, 9.3, 0, {})) B.crate(31.2, 9.3); use('forge', 33.0, 8.6, 0, { face: 'y' }); use('grindstone', 29.6, 9.4, 0, {}); B.barrel(35.4, 8.6); B.barrel(35.9, 9.1);
       // training yard
-      for (const p of [[26.5, 16.5], [29.5, 16], [32.5, 16.5]]) if (!use('dummy', p[0], p[1], 0, {})) B.crate(p[0], p[1]);
-      for (const p of [[26, 24.6], [29, 24.9], [32, 24.6]]) use('archeryButt', p[0], p[1], 0, { face: 'y' });
-      use('weaponRack', 34.2, 18.5, 0, { face: 'x' }); use('weaponRack', 34.2, 21, 0, { face: 'x' }); use('sparRing', 27.6, 19.2, 0, { w: 3.6, d: 3.2 });
+      for (const p of [[25.4, 23.5], [25.4, 21.2], [33.6, 24.6]]) if (!use('dummy', p[0], p[1], 0, {})) B.crate(p[0], p[1]);
+      for (const p of [[26, 14.6], [29, 14.4], [32, 14.6]]) use('archeryButt', p[0], p[1], 0, { face: 'y', range: 5 });
+      use('weaponRack', 34.2, 18.5, 0, { face: 'x' }); use('weaponRack', 34.2, 21, 0, { face: 'x' }); use('sparRing', 27.8, 20.8, 0, { w: 3.6, d: 3.2 }); use('weights', 33.4, 22.6, 0, {}); use('armour', 14.2, 10.2, 0, {}); use('horseStall', 8.6, 23.6, 0, { face: 'x', coat: 'chestnut' });
       // yard dressing
-      if (!use('well', 14.5, 24.5, 0, {})) B.barrel(14.5, 24.5);
+      if (!use('well', 14.5, 24.5, 0, { roof: true })) B.barrel(14.5, 24.5);
       B.tree(13.5, 33.2, { s: 1.5, pal: T.LEAF_D, flowers: null, n: 10 }); B.tree(33.5, 30.5, { s: 1.2 }); B.cart(23.5, 30.6);
       B.barrel(26.6, 9.3); B.barrel(27.1, 9.7); B.crate(14.2, 9.2); B.crate(14.3, 9.25, 0.45, 0.42); B.sack(13.6, 10.0);
       for (const p of [[16.6, 26], [23.4, 26], [16.6, 34.5], [23.4, 34.5], [11, 12], [27, 12.5]]) B.lamp(p[0], p[1]);
@@ -104,7 +104,7 @@
       for (const c of [[KX, KY], [KX + KW, KY], [KX, KY + KD], [KX + KW, KY + KD]]) Kit.tower(c[0], c[1], 1.5, KH + 2.2, { seed: 20 + c[0], n: 12, roof: T.ROOF_SLATE, flag: BLUE, levels: [120, 240, 360] });
       B.box(KX + 5, KY + 3, KH, 7, 6.5, 4.6, { side: T.facade, noTop: true, Px: CS(74, { quoin: true, band: 92, feats: [slit(0.3, 80), slit(0.7, 80)] }), Py: CS(75, { quoin: true, band: 92, feats: [slit(0.3, 80), slit(0.7, 80)] }) });
       B.pyramid(KX + 5, KY + 3, KH + 4.6, 7, 6.5, 3.8, { P: { pal: T.ROOF_SLATE, seed: 9 } }); B.flags.push({ x: KX + 8.5, y: KY + 6.25, z: KH + 8.4, c: RED, pole: 1.3 }); B.block(KX + 5, KY + 3, 7, 6.5, KH);
-      use('banner', KX + 5.5, KY + KD + 0.02, 7.6, { face: 'y', c: RED, len: 3 }); use('banner', KX + 11.5, KY + KD + 0.02, 7.6, { face: 'y', c: RED, len: 3 });
+      use('banner', KX + 5.5, KY + KD + 0.02, 0, { h: 7.6, face: 'y', c: RED, len: 3 }); use('banner', KX + 11.5, KY + KD + 0.02, 0, { h: 7.6, face: 'y', c: RED, len: 3 });
       B.box(KX + 6.6, KY + KD, 0, 3.8, 1.0, 0.16, { side: T.facade, P: CS(3, { band: 0 }), top: Kit.paving }); B.box(KX + 7.0, KY + KD, 0.16, 3.0, 0.6, 0.16, { side: T.facade, P: CS(3, { band: 0 }), top: Kit.paving }); Kit.walk(KX + 6.6, KY + KD, KX + 10.4, KY + KD + 1, 0.16);
       Kit.portal(KX + 8.5, KY + KD + 0.75, 0.16, { to: 'hall', at: 'door', name: 'keep', label: 'The Keep', ex: KX + 8.5, ey: KY + KD + 2 });
       Kit.portal(KX + KW - 1.6, KY + KD - 1.6, KH, { to: 'royal', at: 'roofstair', name: 'roof', label: 'Down to the royal apartments', ex: KX + KW - 2.8, ey: KY + KD - 2.8 });
@@ -124,19 +124,19 @@
       Kit.portal(40.6, 31.5, 0, { to: 'ward', at: 'innergate', name: 'gate', label: 'Outer ward', ex: 39.2, ey: 31.5 });
       // ---- the garden ----
       B.fountain(GX, GY);
-      const hedge = (x, y, w, d) => { if (!use('hedge', x, y, 0, { w, d })) { B.box(x, y, 0, w, d, 0.6, { side: T.flat(0x356e3a), top: T.flat(0x4d9440) }); B.block(x, y, w, d, 0); } };
+      const hedge = (x, y, w, d) => { if (!(w >= d ? use('hedge', x, y, 0, { len: w, w: d, h: 0.7 }) : use('hedge', x, y, 0, { len: d, w: w, h: 0.7, face: 'x' }))) { B.box(x, y, 0, w, d, 0.6, { side: T.flat(0x356e3a), top: T.flat(0x4d9440) }); B.block(x, y, w, d, 0); } };
       for (const sx of [-1, 1]) for (const sy of [-1, 1]) {            // four parterres round the fountain
         const cx = GX + sx * 5.4, cy = GY + sy * 5.4;
         hedge(cx - 2.6, cy - 2.6, 5.2, 0.5); hedge(cx - 2.6, cy + 2.1, 5.2, 0.5); hedge(cx - 2.6, cy - 2.1, 0.5, 1.5); hedge(cx - 2.6, cy + 0.6, 0.5, 1.5); hedge(cx + 2.1, cy - 2.1, 0.5, 1.5); hedge(cx + 2.1, cy + 0.6, 0.5, 1.5);
-        if (!use('flowerbed', cx - 1.5, cy - 1.5, 0, { w: 3, d: 3, seed: sx * 3 + sy })) for (let i = 0; i < 5; i++) B.flowers(cx - 1.3, cy - 1.2 + i * 0.6, cx + 1.3, cy - 1.2 + i * 0.6, 0.02, 9, i + sx * 7 + sy * 3 + 20, 1.3);
-        if (!use('topiary', cx, cy, 0, { kind: (sx + sy) & 3 })) B.bush(cx, cy, { s: 1.2, flowers: null });
+        if (!use('flowerbed', cx - 1.5, cy - 1.5, 0, { w: 3, d: 3, seed: sx * 3 + sy + 5, kind: ['roses', 'tulips', 'lavender', 'mixed'][(sx + 1) + (sy + 1) / 2] })) for (let i = 0; i < 5; i++) B.flowers(cx - 1.3, cy - 1.2 + i * 0.6, cx + 1.3, cy - 1.2 + i * 0.6, 0.02, 9, i + sx * 7 + sy * 3 + 20, 1.3);
+        if (!use('topiary', cx, cy, 0, { kind: ['cone', 'ball', 'spiral', 'tiers'][(sx + 1) + (sy + 1) / 2], pot: false })) B.bush(cx, cy, { s: 1.2, flowers: null });
       }
       use('roseArch', GX - 0.9, GY + 9.6, 0, { face: 'y' }); use('roseArch', GX + 9.4, GY - 0.9, 0, { face: 'x' });
-      use('sundial', GX - 9.2, GY, 0, {}); use('gardenStatue', GX, GY - 9.2, 0, { kind: 1 }); use('birdBath', GX + 9.2, GY + 6, 0, {});
-      for (const p of [[GX - 3.6, GY - 9.6], [GX + 2.4, GY - 9.6], [GX - 9.9, GY - 3.4], [GX - 9.9, GY + 2.2]]) if (!use('gardenBench', p[0], p[1], 0, { face: p[1] < GY - 9 ? 'y' : 'x' })) B.bench(p[0], p[1], p[1] < GY - 9 ? 'x' : 'y');
+      use('sundial', GX - 11.2, GY - 1.6, 0, {}); use('gardenStatue', GX + 1.8, GY - 11.0, 0, { kind: 'maiden' }); use('statue', 12.5, 19.4, 0, { kind: 'king' }); use('statue', 22, 19.2, 0, { kind: 'knight' }); use('birdBath', GX + 11, GY + 6, 0, { bird: true });
+      for (const p of [[GX - 3.6, GY - 9.6], [GX + 2.4, GY - 9.6], [GX - 9.9, GY - 3.4], [GX - 9.9, GY + 2.2]]) if (!use('stoneBench', p[0], p[1], 0, { face: p[1] < GY - 9 ? 'y' : 'x' })) B.bench(p[0], p[1], p[1] < GY - 9 ? 'x' : 'y');
       // orchard and pond by the near walls
-      for (let i = 0; i < 6; i++) { const x = 12 + (i % 3) * 2.4, y = 35 + ((i / 3) | 0) * 2.6; if (!use('orchardTree', x, y, 0, { seed: i })) B.tree(x, y, { s: 0.9, flowers: T.APPLE, fp: 0.04 }); }
-      use('pond', 35.5, 36, 0, { r: 2.2 }); use('beehive', 20.2, 38.6, 0, {}); use('beehive', 21.2, 38.9, 0, {}); use('vegPatch', 16.5, 20.6, 0, { w: 3.4, d: 2.6 }); use('dovecote', 22.2, 21.4, 0, {});
+      for (let i = 0; i < 6; i++) { const x = 12 + (i % 3) * 2.4, y = 35 + ((i / 3) | 0) * 2.6; if (!use('orchardTree', x, y, 0, { seed: i, kind: ['apple', 'pear', 'plum', 'cherry'][i % 4] })) B.tree(x, y, { s: 0.9, flowers: T.APPLE, fp: 0.04 }); }
+      use('pond', 33.6, 34.6, 0, { w: 3.6, d: 2.6 }); use('beehive', 20.2, 38.6, 0, {}); use('beehive', 21.2, 38.9, 0, {}); use('vegPatch', 16.5, 20.6, 0, { w: 3.4, d: 2.6 }); use('dovecote', 22.2, 21.4, 0, {});
       for (let i = 0; i < 18; i++) B.bush(10 + h2(i, 11) * 30, 20 + h2(i, 12) * 20, { s: 0.7 + h2(i, 13) * 0.4, noBlock: true, fp: 0.2 });
       B.tree(11.5, 22.5, { s: 1.4, pal: T.LEAF_D, flowers: null, n: 10 }); B.tree(38.5, 25, { s: 1.2 }); B.tree(23.5, 12.2, { s: 1.0, flowers: T.BLOSSOM });
       for (const p of [[10.6, 18.6], [15.4, 18.6], [22.6, 18.4], [GX - 4.6, GY - 4.6], [GX + 4.6, GY + 4.6], [32, 19.6]]) B.lamp(p[0], p[1]);
@@ -169,12 +169,12 @@
       B.box(6.85, 2.75, 0.4, 0.9, 0.22, 1.9, { side: velvet(BLUE), top: gold }); B.box(6.9, 2.97, 0.4, 0.8, 0.7, 0.42, { side: gold, top: T.flat(BLUE) }); B.block(6.85, 2.75, 0.9, 0.92, 0.4);
       // columns, light, banners
       for (const y of [7.2, 11.4, 15.6, 19.8, 24]) { if (!use('column', 4.4, y, 0, { h: 6.3 })) B.cyl(4.4, y, 0, 0.34, 6.3, 10, T.flat(0xb8b0a2), {}); if (y > 8 && !use('column', 13.6, y, 0, { h: 6.3 })) B.cyl(13.6, y, 0, 0.34, 6.3, 10, T.flat(0xb8b0a2), {}); B.blockC(4.4, y, 0.5, 0); if (y > 8) B.blockC(13.6, y, 0.5, 0); }
-      for (const y of [10.5, 16.5, 22.5]) if (!use('chandelier', 9, y, 4.5, {})) E.addLight(9, y, 4.2, 8.5, [1.0, 0.74, 0.4], 0.75);
-      for (const x of [4.3, 6.2, 11.9, 13.4]) use('banner', x, Y0 + 0.02, 5.6, { face: 'y', c: x > 5 && x < 13 ? RED : BLUE, len: 2.6 });
-      for (const f of [0.208, 0.393, 0.578, 0.763]) { const y = Y1 - f * (Y1 - Y0 + 0.5); use('banner', X0 + 0.02, y, 5.2, { face: 'x', c: (f * 10 | 0) & 1 ? BLUE : RED, len: 2.3 }); use('torch', X0 + 0.02, y - 0.7, 1.9, { face: 'x' }); use('torch', X0 + 0.02, y + 0.7, 1.9, { face: 'x' }); }
+      for (const y of [10.5, 16.5, 22.5]) if (!use('chandelier', 9, y, 0, { h: 4.6, drop: 1.9, r: 0.8, n: 10 })) E.addLight(9, y, 4.2, 8.5, [1.0, 0.74, 0.4], 0.75);
+      for (const x of [4.3, 6.2, 11.9, 13.4]) use('banner', x, Y0 + 0.02, 0, { h: 5.6, face: 'y', c: x > 5 && x < 13 ? RED : BLUE, len: 2.6 });
+      for (const f of [0.208, 0.393, 0.578, 0.763]) { const y = Y1 - f * (Y1 - Y0 + 0.5); use('banner', X0 + 0.02, y, 0, { h: 5.2, face: 'x', c: (f * 10 | 0) & 1 ? BLUE : RED, len: 2.3 }); use('torch', X0 + 0.02, y - 0.7, 0, { h: 1.9, face: 'x' }); use('torch', X0 + 0.02, y + 0.7, 0, { h: 1.9, face: 'x' }); }
       for (const p of [[6.3, 7.0], [11.7, 7.0], [5.6, 25.0], [12.4, 25.0]]) if (!use('brazier', p[0], p[1], 0, {})) E.addLight(p[0], p[1], 1.2, 5, [1, 0.6, 0.25], 1.2);
-      for (const y of [9.4, 14.4, 19.4]) use('feastTable', 11.4, y, 0, { w: 1.1, d: 3.2, food: true });
-      for (const p of [[2.6, 6.2], [2.6, 25.2], [15.3, 6.4], [15.3, 25.2]]) use('pottedPlant', p[0], p[1], 0, {});
+      for (const y of [9.4, 14.4, 19.4]) use('feastTable', 11.3, y, 0, { len: 3.0, food: true, face: 'x' });
+      for (const p of [[2.6, 6.2], [2.6, 25.2], [15.3, 6.4], [15.3, 25.2]]) use('plant', p[0], p[1], 0, { kind: 'tree', s: 1.2 });
       // ways out
       Kit.stairwell(13.4, 21.6, 2.2, 1.6, 0, '+x'); Kit.portal(14.4, 22.4, 0, { to: 'hall', at: 'up', name: 'down', label: 'Down to the great hall', ex: 12.6, ey: 22.4 });
       Kit.stairs(13.2, 2.4, 2.8, 1.3, '+x', 0, 1.7); Kit.floor(16, 2.4, 17.3, 3.7, flag, 1.7); B.box(16, 2.4, 0, 1.3, 1.3, 1.7, { side: T.facade, P: CS(8, { band: 0 }), noTop: true });

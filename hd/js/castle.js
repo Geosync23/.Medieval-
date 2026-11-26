@@ -135,7 +135,7 @@ Castle.add = (id, def) => { def.id = id; Castle.areas[id] = def; };
       s.wait -= dt; if (s.wait > 0) continue;
       if (s.poi && s.poi.sit !== undefined && s.p.sit) { s.p.sit = false; const n = nearest(s.x, s.y, s.poi.z, 1.5); if (n) { s.x = n[0]; s.y = n[1]; s.z = n[2]; } }
       const kinds = s.o.kinds, list = B.pois.filter(q => (!kinds || kinds.indexOf(q.kind) >= 0) && !q.busy); if (!list.length) { s.wait = 3; continue; }
-      const q = list[(rnd() * list.length) | 0], n = nearest(q.x, q.y, q.z || 0, 1.2); if (!n) { s.wait = 2; continue; }
+      const q = list[(rnd() * list.length) | 0], n = nearest(q.ax === undefined ? q.x : q.ax, q.ay === undefined ? q.y : q.ay, q.z || 0, 1.4); if (!n) { s.wait = 2; continue; }
       const p = findPath(s.x, s.y, n[0], n[1]); if (!p) { s.wait = 2; continue; }
       if (s.poi) s.poi.busy = false; s.poi = q; q.busy = true; s.path = p; s.wait = 4 + rnd() * 9; s.arr = false;
     }

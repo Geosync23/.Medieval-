@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>King Simulator — furniture &amp; decoration gallery</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #14111a; overflow: hidden; color: #f1e6c8;
+    font-family: "Courier New", ui-monospace, Menlo, Consolas, monospace; -webkit-user-select: none; user-select: none; }
+  #view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; image-rendering: pixelated; image-rendering: crisp-edges; }
+  #top { position: fixed; top: 0; left: 0; right: 0; display: flex; gap: 6px; padding: 8px; flex-wrap: wrap; align-items: center; pointer-events: none; z-index: 3; }
+  .grp { display: flex; flex-wrap: wrap; pointer-events: auto; box-shadow: 0 3px 0 #0b090e; }
+  button { font: inherit; font-weight: 700; font-size: 11px; letter-spacing: .3px; color: #e9dcb8; background: #3b2f3f; border: 2px solid #1b1520;
+    border-left-width: 0; padding: 7px 8px; cursor: pointer; text-transform: uppercase; box-shadow: inset 0 2px 0 #5a4a5c, inset 0 -3px 0 #2a2030; }
+  .grp button:first-child { border-left-width: 2px; }
+  button.on { background: #c9a04a; color: #2a1c10; box-shadow: inset 0 2px 0 #f0d480, inset 0 -3px 0 #96702a; }
+  #stat { position: fixed; left: 8px; bottom: 8px; z-index: 3; background: rgba(20,17,26,.82); border: 2px solid #1b1520; padding: 6px 10px; font-size: 12px; font-weight: 700; line-height: 1.5; pointer-events: none; white-space: pre; }
+  #busy { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; letter-spacing: 2px; background: rgba(20,17,26,.6); z-index: 6; pointer-events: none; opacity: 0; transition: opacity .12s; }
+  #busy.on { opacity: 1; }
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="top">
+  <div class="grp" id="pages"></div>
+  <div class="grp" id="times"></div>
+  <div class="grp" id="opts"></div>
+</div>
+<div id="stat"></div>
+<div id="busy">PAINTING…</div>
+<script src="js/engine.js"></script>
+<script>(function () { let n = 0; const q = E.quad, b = E.blob; E.quad = function () { n++; return q.apply(E, arguments); }; E.blob = function () { n++; return b.apply(E, arguments); }; E.__n = () => n; })();</script>
+<script src="js/tex.js"></script>
+<script src="js/build.js"></script>
+<script src="js/furnish.js"></script>
+<script src="js/furnish-gallery.js"></script>
+<script>
+'use strict';
+(function () {
+  const cv = document.getElementById('view'), ctx = cv.getContext('2d');
+  const off = document.createElement('canvas'), octx = off.getContext('2d'), lab = document.createElement('canvas'), lctx = lab.getContext('2d');
+  const h2 = E.h2, PAGES = FzGallery.pages, PW = 23;
+  let img = null, frame = null, camX = 0, camY = 0, zoom = 1, zoomT = 1, anchor = null, dpr = 1, ready = false, page = 0, tod = 'interior', show = { labels: true, pois: false, blocks: false }, placed = [], quads = {};
+  const TIMES = {
+    interior: { L: [-0.8, 0.2, 0.52], sun: [0.72, 0.62, 0.46], amb: [0.47, 0.45, 0.55], fill: [0.10, 0.08, 0.06], night: true, lamp: 0.7, bg: [14, 11, 18] },
+    day: { L: [-0.45, 0.75, 0.8], sun: [0.8, 0.66, 0.44], amb: [0.5, 0.52, 0.7], fill: [0.16, 0.15, 0.13], night: false, lamp: 0, bg: [24, 20, 30] },
+    night: { L: [-0.75, 0.25, 0.6], sun: [0.22, 0.34, 0.66], amb: [0.15, 0.15, 0.28], fill: [0.02, 0.02, 0.05], night: true, lamp: 1.2, bg: [7, 7, 14] },
+  };
+  function applyLight() { const t = TIMES[tod], Lt = E.light; Lt.L = E.norm(t.L); Lt.sun = t.sun; Lt.amb = t.amb; Lt.fill = t.fill; Lt.night = t.night; Lt.lampScale = t.lamp; Lt.bg = t.bg; }
+  const floorTex = (x, y) => { const tx = Math.floor(x * 32), ty = Math.floor(y * 32), row = Math.floor(ty / 14), o = (h2(row, 5) * 20) | 0, col = Math.floor((tx + o) / 22), lx = tx + o - col * 22, ly = ty - row * 14; if (lx === 0 || ly === 0) return 0x4e4a52; let f = 0.94 + h2(tx, ty) * 0.08; if (lx === 1 || ly === 13) f *= 1.07; else if (lx === 21 || ly === 1) f *= 0.9; return T.mul([0x9d978c, 0x8f8a82, 0xa8a193, 0x857f78][(h2(col, row) * 4) | 0], f); };
+  const grassTex = (x, y) => T.grass(x, y);
+
+  /* lay a page out in rows along +x; returns the page depth */
+  function layout(pg, build) {
+    let y = 1.2; placed = [];
+    for (const row of pg.rows) {
+      let x = 1.2, rd = 0; const wallH = row.wallH || 2.7; y += row.pre || 0;
+      placed.push({ title: row.title, x: 0.4, y: y + 0.3 });
+      for (const it of row.items) {
+        const [n, w, d, f, fl] = it, wall = fl === 'wall' || fl === 'wallx';
+        if (x + w > PW - 0.6) { x = 1.2; y += rd + 1.7; rd = 0; }
+        if (build) {
+          const q0 = E.__n ? E.__n() : 0;
+          if (fl === 'wall') { B.box(x - 0.15, y - 0.3, 0, w + 0.3, 0.3, wallH, { side: T.facade, P: { mat: 'stone', seed: 3, tint: 0xa39c90 }, top: T.flat(0x3a3640) }); f(x + w / 2, y); }
+          else if (fl === 'wallx') { B.box(x - 0.3, y - 0.15, 0, 0.3, d + 0.3, wallH, { side: T.facade, P: { mat: 'stone', seed: 4, tint: 0xa39c90 }, top: T.flat(0x3a3640) }); f(x, y + d / 2); }
+          else if (fl === 'c') f(x + w / 2, y + d / 2); else f(x, y);
+          quads[n] = (E.__n ? E.__n() : 0) - q0;
+        }
+        placed.push({ n, x, y, w, d: wall ? 0.5 : d });
+        x += w + (row.gap || 0.9); rd = Math.max(rd, d);
+      }
+      y += rd + 2.0;
+    }
+    return y;
+  }
+
+  let PD = 10, ZM = 3.4;
+  function bake() {
+    const pg = PAGES[page]; PD = Math.ceil(layout(pg, false));
+    E.init((PW + PD) * E.HW, (PW + PD) * E.HH + Math.ceil(ZM * E.ZS) + 8, PD * E.HW, Math.ceil(ZM * E.ZS) + 4);
+    B.reset(); quads = {};
+    E.quad([0, 0, 0], [PW, 0, 0], [0, PD, 0], (s, t) => (pg.grass ? grassTex : floorTex)(s, t), { n: [0, 0, 1] });
+    layout(pg, true);
+    applyLight(); E.bake([0, 0, PW, PD, ZM]);
+    off.width = lab.width = E.W; off.height = lab.height = E.H; img = octx.createImageData(E.W, E.H); frame = new Uint32Array(img.data.buffer);
+    labels();
+  }
+  function labels() {
+    lctx.clearRect(0, 0, lab.width, lab.height); lctx.textBaseline = 'top';
+    const txt = (s, x, y, c, f) => { lctx.font = f; lctx.fillStyle = 'rgba(12,10,16,.75)'; const w = lctx.measureText(s).width; lctx.fillRect(x - 2, y - 1, w + 4, parseInt(f.slice(5)) + 3); lctx.fillStyle = c; lctx.fillText(s, x, y); };
+    if (show.labels) for (const p of placed) {
+      if (p.title) txt(p.title.toUpperCase(), E.sx(p.x, p.y - 0.9) - 20, E.sy(p.x, p.y - 0.9, 0) - 4, '#f0d480', 'bold 11px monospace');
+      else txt(p.n, Math.round(E.sx(p.x, p.y + p.d + 0.3)) - 6, Math.round(E.sy(p.x, p.y + p.d + 0.3, 0)) + 2, '#e9dcb8', 'bold 9px monospace');
+    }
+    const iso = (x, y, z) => [E.sx(x, y), E.sy(x, y, z)];
+    if (show.blocks) { lctx.strokeStyle = 'rgba(255,220,60,.9)'; lctx.lineWidth = 1; for (const b of B.blocks) { const z = (b[4] || 0) + 0.02, P = [iso(b[0], b[1], z), iso(b[0] + b[2], b[1], z), iso(b[0] + b[2], b[1] + b[3], z), iso(b[0], b[1] + b[3], z)]; lctx.beginPath(); lctx.moveTo(P[3][0], P[3][1]); for (const p of P) lctx.lineTo(p[0], p[1]); lctx.stroke(); } }
+    if (show.pois) for (const p of B.pois) {
+      const a = iso(p.x, p.y, p.sit !== undefined ? p.sit : p.z), b = iso(p.x + p.fx * 0.3, p.y + p.fy * 0.3, p.sit !== undefined ? p.sit : p.z);
+      lctx.strokeStyle = lctx.fillStyle = p.sit !== undefined ? '#40f0ff' : '#ff60c0'; lctx.lineWidth = 1.5; lctx.beginPath(); lctx.moveTo(a[0], a[1]); lctx.lineTo(b[0], b[1]); lctx.stroke(); lctx.fillRect(a[0] - 2, a[1] - 2, 4, 4);
+      if (p.ax !== undefined) { const c = iso(p.ax, p.ay, p.z); lctx.strokeStyle = '#ffffff'; lctx.strokeRect(c[0] - 1.5, c[1] - 1.5, 3, 3); }
+      lctx.font = '7px monospace'; lctx.fillText(p.kind, a[0] + 4, a[1] - 3);
+    }
+  }
+  /* flames (same effect as the game's Sim.fx) */
+  function flames(t) {
+    for (let k = 0; k < B.flames.length; k++) {
+      const f = B.flames[k], sx = Math.round(E.sx(f.x, f.y)), sy = Math.round(E.sy(f.x, f.y, f.z)), d = f.x + f.y + f.z + 0.4, ph = Math.floor(t * 10 + k * 3);
+      const hgt = Math.round((7 + h2(ph, k) * 5) * f.s), w = Math.round(2.6 * f.s);
+      for (let y = 0; y < hgt; y++) { const ww = Math.max(0, Math.round(w * (1 - y / hgt) + (h2(ph, (y >> 1) + k) - 0.5) * 2)), lean = Math.round((h2(ph + 1, k) - 0.5) * 3 * y / hgt);
+        for (let x = -ww; x <= ww; x++) E.px(sx + x + lean, sy - y, d, y < hgt * 0.3 ? (Math.abs(x) < ww * 0.5 ? 0xfff2a8 : 0xffc84a) : y < hgt * 0.65 ? (Math.abs(x) < ww * 0.5 ? 0xffc84a : 0xff9a2e) : 0xe0521e); }
+      for (let i = 0; i < 5; i++) { const u = (t * 0.7 + i * 0.2 + k * 0.3) % 1, ex = sx + Math.round(Math.sin(u * 9 + i * 2) * 5), ey = sy - hgt - Math.round(u * 26); E.px(ex, ey, d + 1, u < 0.6 ? 0xffc84a : 0xe0521e); if (u < 0.3) E.px(ex + 1, ey, d + 1, 0xffe27a); }
+    }
+  }
+
+  /* ---------- camera / input ---------- */
+  const zMin = () => Math.max(0.2, Math.min(cv.width / (E.W || 1), cv.height / (E.H || 1)) * 0.8), zClamp = z => Math.max(zMin(), Math.min(12, z));
+  function setZoom(z, cx, cy) { if (cx === undefined) { cx = innerWidth / 2; cy = innerHeight / 2; } const bx = camX + (cx * dpr - cv.width / 2) / zoom, by = camY + (cy * dpr - cv.height / 2) / zoom; zoom = zClamp(z); camX = bx - (cx * dpr - cv.width / 2) / zoom; camY = by - (cy * dpr - cv.height / 2) / zoom; }
+  function resize() { dpr = Math.min(3, window.devicePixelRatio || 1); cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(innerHeight * dpr); }
+  addEventListener('resize', resize); resize();
+  const ptr = new Map(); let pinch0 = 0, zoom0 = 1, pmx = 0, pmy = 0;
+  cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); ptr.set(e.pointerId, [e.clientX, e.clientY]); if (ptr.size === 2) { const a = [...ptr.values()]; pinch0 = Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1]) || 1; zoom0 = zoom; pmx = (a[0][0] + a[1][0]) / 2; pmy = (a[0][1] + a[1][1]) / 2; } });
+  cv.addEventListener('pointermove', e => {
+    const p = ptr.get(e.pointerId); if (!p) return;
+    const dx = e.clientX - p[0], dy = e.clientY - p[1]; p[0] = e.clientX; p[1] = e.clientY;
+    if (ptr.size === 1) { camX -= dx * dpr / zoom; camY -= dy * dpr / zoom; }
+    else if (ptr.size === 2) { const a = [...ptr.values()], d = Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1]), mx = (a[0][0] + a[1][0]) / 2, my = (a[0][1] + a[1][1]) / 2; camX -= (mx - pmx) * dpr / zoom; camY -= (my - pmy) * dpr / zoom; pmx = mx; pmy = my; setZoom(zoom0 * d / pinch0, mx, my); zoomT = zoom; }
+  });
+  const up = e => ptr.delete(e.pointerId); cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  cv.addEventListener('wheel', e => { e.preventDefault(); zoomT = zClamp(zoomT * Math.exp(-Math.max(-120, Math.min(120, e.deltaY)) * 0.0022)); anchor = [e.clientX, e.clientY]; }, { passive: false });
+
+  /* ---------- UI ---------- */
+  function buttons(id, items, cur, cb) { const el = document.getElementById(id); el.innerHTML = ''; for (const k of items) { const b = document.createElement('button'); b.textContent = k; if (cur(k)) b.className = 'on'; b.onclick = () => { cb(k); ui(); }; el.appendChild(b); } }
+  function busy(fn) { const el = document.getElementById('busy'); el.classList.add('on'); setTimeout(() => { fn(); el.classList.remove('on'); }, 30); }
+  function home() { zoom = zoomT = Math.max(1, Math.round(Math.min(cv.width, cv.height) / 520)); camX = E.sx(PW / 2, 3); camY = E.sy(PW / 2, 3, 0); }
+  function ui() {
+    buttons('pages', PAGES.map(p => p.name), k => k === PAGES[page].name, k => { page = PAGES.findIndex(p => p.name === k); busy(() => { bake(); home(); }); });
+    buttons('times', Object.keys(TIMES), k => k === tod, k => { tod = k; busy(() => { applyLight(); E.bake([0, 0, PW, PD, ZM]); }); });
+    buttons('opts', Object.keys(show), k => show[k], k => { show[k] = !show[k]; labels(); });
+  }
+  const stat = document.getElementById('stat');
+  let time = 0, last = performance.now(), statT = 0;
+  function render() {
+    E.begin(frame); flames(time);
+    const vw = cv.width / zoom, vh = cv.height / zoom;
+    camX = Math.max(Math.min(vw / 2, E.W / 2), Math.min(Math.max(E.W - vw / 2, E.W / 2), camX));
+    camY = Math.max(Math.min(vh / 2, E.H / 2), Math.min(Math.max(E.H - vh / 2, E.H / 2), camY));
+    const x0 = camX - vw / 2, y0 = camY - vh / 2;
+    const dx0 = Math.max(0, Math.floor(x0)), dy0 = Math.max(0, Math.floor(y0)), dw = Math.min(E.W, Math.ceil(x0 + vw) + 1) - dx0, dh = Math.min(E.H, Math.ceil(y0 + vh) + 1) - dy0;
+    octx.putImageData(img, 0, 0, dx0, dy0, dw, dh);
+    const bg = E.light.bg; ctx.fillStyle = 'rgb(' + bg[0] + ',' + bg[1] + ',' + bg[2] + ')'; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.imageSmoothingEnabled = zoom < 1;
+    const X = Math.round((dx0 - x0) * zoom), Y = Math.round((dy0 - y0) * zoom);
+    ctx.drawImage(off, dx0, dy0, dw, dh, X, Y, dw * zoom, dh * zoom);
+    ctx.drawImage(lab, dx0, dy0, dw, dh, X, Y, dw * zoom, dh * zoom);
+  }
+  function tick(now) {
+    requestAnimationFrame(tick); if (!ready) return;
+    const dt = Math.min(0.1, (now - last) / 1000); last = now; time += dt;
+    if (Math.abs(zoomT - zoom) > zoom * 0.001) { const z = zoom + (zoomT - zoom) * Math.min(1, dt * 12); anchor ? setZoom(z, anchor[0], anchor[1]) : setZoom(z); }
+    render();
+    if (now - statT > 500) { statT = now; stat.textContent = PAGES[page].name + '   buffer ' + E.W + ' x ' + E.H + '   ' + B.pois.length + ' pois, ' + B.blocks.length + ' blocks\ndrag = pan, wheel / pinch = zoom'; }
+  }
+  window.__fz = {
+    pages: () => PAGES.map(p => p.name), page: i => { page = i; bake(); home(); ui(); return [E.W, E.H]; },
+    time: k => { tod = k; applyLight(); E.bake([0, 0, PW, PD, ZM]); ui(); }, show: o => { Object.assign(show, o); labels(); ui(); },
+    view: (bx, by, z) => { camX = bx; camY = by; zoom = zoomT = z; }, fit: () => { zoom = zoomT = Math.min(cv.width / E.W, cv.height / E.H); camX = E.W / 2; camY = E.H / 2; },
+    quads: () => quads, placed: () => placed, size: () => [E.W, E.H], render,
+  };
+  ui();
+  busy(() => { const h = parseInt((location.hash || '').slice(1)); if (h >= 0 && h < PAGES.length) page = h; bake(); home(); ui(); ready = true; requestAnimationFrame(tick); });
+})();
+</script>
+</body>
+</html>
