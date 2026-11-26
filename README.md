@@ -65,6 +65,14 @@ the twelve weapons from the combat page, switchable mid-battle.
 
 ## The castle (`hd/castle.html`)
 
+There are two layouts. **Layout 2** (`hd/castle.html`, `hd/js/castle_ext.js`) is the current one: an
+L-shaped keep (a pitched royal range and a flat-roofed great hall range meeting at a great round tower)
+spread over three outdoor areas: the great court, a long lower bailey with a terrace and grand stair,
+and a garden terrace with the chapel, cloister, hedge maze, lily pond and orchard. **Layout 1**
+(`hd/castle_v1.html`, `hd/js/castle_ext_v1.js`) is the first design, kept for reference: a square
+outer ward and a square inner ward with a box keep. Both share the throne room
+(`hd/js/castle_throne.js`) and the nine interiors. The description below is of layout 1's areas.
+
 A large explorable castle made of twelve connected areas. Hold to walk, tap to walk to a spot, tap a
 yellow tag to use a door or stair. Walking is height-aware: stairs, wall-walks, tower tops and the keep's
 battlements are all reachable on foot.

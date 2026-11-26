@@ -72,6 +72,7 @@ Castle.add = (id, def) => { def.id = id; Castle.areas[id] = def; };
     E.bake(Object.assign([b[0], b[1], b[2], b[3], zt], a.shadow || {}));
   }
   function enter(id, at, fromPortal) {
+    const rm = Castle.remap && Castle.remap[id + '/' + at]; if (rm) { id = rm[0]; at = rm[1]; }     // a layout may move a door to another area
     const a = Castle.areas[id]; if (!a) return;
     busyN++; $('busy').textContent = a.name.toUpperCase(); $('busy').classList.add('on');
     setTimeout(() => {
