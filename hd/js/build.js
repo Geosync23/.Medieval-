@@ -6,8 +6,8 @@ const B = {};
   const FE = E.F_EMIS << 24;
   B.reset = function () { B.blocks = []; B.smokes = []; B.flags = []; B.pois = []; B.jets = []; B.flames = []; };
   B.reset();
-  B.block = (x, y, w, d) => B.blocks.push([x, y, w, d]);
-  B.blockC = (cx, cy, r) => B.blocks.push([cx - r, cy - r, r * 2, r * 2]);
+  B.block = (x, y, w, d, z) => B.blocks.push([x, y, w, d, z || 0]);
+  B.blockC = (cx, cy, r, z) => B.blocks.push([cx - r, cy - r, r * 2, r * 2, z || 0]);
   B.poi = (x, y, kind, fx, fy) => B.pois.push({ x, y, kind, fx: fx || 0, fy: fy || 0 });
 
   /* ---------- basic solids ---------- */

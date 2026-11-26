@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>King Simulator — The Castle</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #14111a; overflow: hidden; color: #f1e6c8; font-family: "Courier New", ui-monospace, Menlo, Consolas, monospace; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  #view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; image-rendering: pixelated; image-rendering: crisp-edges; }
+  .bar { position: fixed; left: 0; right: 0; top: 0; display: flex; gap: 6px; padding: 8px; flex-wrap: wrap; align-items: center; pointer-events: none; z-index: 3; }
+  .grp { display: flex; pointer-events: auto; box-shadow: 0 3px 0 #0b090e; }
+  button, select { font: inherit; font-weight: 700; font-size: 12px; letter-spacing: .4px; color: #e9dcb8; background: #3b2f3f; border: 2px solid #1b1520; border-left-width: 0; padding: 8px 10px; cursor: pointer; text-transform: uppercase; box-shadow: inset 0 2px 0 #5a4a5c, inset 0 -3px 0 #2a2030; }
+  .grp > :first-child { border-left-width: 2px; } button.on { background: #c9a04a; color: #2a1c10; box-shadow: inset 0 2px 0 #f0d480, inset 0 -3px 0 #96702a; }
+  #title { position: fixed; left: 8px; bottom: 8px; z-index: 3; pointer-events: none; background: #e9dcb8; color: #2a1c10; border: 2px solid #1b1520; box-shadow: inset 0 0 0 2px #c9b684, 0 3px 0 #0b090e; padding: 7px 12px; max-width: min(420px, 92vw); }
+  #area { font-size: 15px; font-weight: 700; } #sub { font-size: 12px; color: #6a4a2a; line-height: 1.35; margin-top: 2px; } #how { font-size: 11px; color: #6a4a2a; margin-top: 4px; }
+  #labels { position: fixed; inset: 0; pointer-events: none; z-index: 2; overflow: hidden; }
+  .plabel { position: absolute; transform: translate(-50%, -100%); pointer-events: auto; cursor: pointer; white-space: nowrap; font-size: 11px; font-weight: 700; color: #2a1c10; background: #f0d480; border: 2px solid #1b1520; padding: 2px 6px; box-shadow: 0 2px 0 #0b090e; }
+  .plabel::after { content: ''; position: absolute; left: 50%; bottom: -7px; margin-left: -4px; border: 4px solid transparent; border-top-color: #1b1520; }
+  #busy { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; letter-spacing: 3px; background: rgba(20,17,26,.72); z-index: 6; pointer-events: none; opacity: 0; transition: opacity .12s; }
+  #busy.on { opacity: 1; }
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div class="bar"><div class="grp" id="times"></div><div class="grp"><select id="map"></select></div></div>
+<div id="labels"></div>
+<div id="title"><div id="area"></div><div id="sub"></div><div id="how">Hold to walk · tap to walk there · tap a yellow tag to use a door or stair · pinch to zoom</div></div>
+<div id="busy"></div>
+<script src="js/engine.js"></script>
+<script src="js/tex.js"></script>
+<script src="js/build.js"></script>
+<script src="js/scenes.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/forest.js"></script>
+<script src="js/kit.js"></script>
+<script src="js/castle.js"></script>
+<script src="js/castle_ext.js"></script>
+<script>Castle.go();</script>
+</body>
+</html>

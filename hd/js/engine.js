@@ -115,7 +115,7 @@ const E = {};
     SMS = bounds.sms || 36;
     const w = Math.ceil((a1 - a0) * SMS) + 4, h = Math.ceil((b1 - b0) * SMS) + 4;
     SMW = w; smOX = -a0 * SMS + 2; smOY = -b0 * SMS + 2;
-    if (!SM || SM.length !== w * h) SM = new Float32Array(w * h); SM.fill(-1e9); SM.h = h;
+    if (!SM || SM.length !== w * h || smKept) SM = new Float32Array(w * h); smKept = false; SM.fill(-1e9); SM.h = h;
   }
   function rasterShadow(q) {
     if (q.noShadow) return;
@@ -256,6 +256,10 @@ const E = {};
     }
   };
 
+  // keep / reinstate a whole baked scene, so walking back into an area does not re-bake it
+  let smKept = false;
+  E.save = function () { smKept = true; return { W, H, OX, OY, N, dep, nrm, flg, base, lights, SM, SMW, SMS, smA, smB, smL, smOX, smOY, light: Object.assign({}, E.light), water: E.water }; };
+  E.load = function (o) { W = o.W; H = o.H; OX = o.OX; OY = o.OY; N = o.N; dep = o.dep; nrm = o.nrm; flg = o.flg; base = o.base; lights = o.lights; SM = o.SM; SMW = o.SMW; SMS = o.SMS; smA = o.smA; smB = o.smB; smL = o.smL; smOX = o.smOX; smOY = o.smOY; smKept = true; Object.assign(E.light, o.light); E.water = o.water; E.W = W; E.H = H; E.OX = OX; E.OY = OY; E.dep = dep; E.base = base; };
   E.begin = function (frame) { frame.set(base); E.frame = frame; };
   E.px = function (ix, iy, d, c) {
     if (ix < 0 || iy < 0 || ix >= W || iy >= H) return;
