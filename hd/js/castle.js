@@ -40,7 +40,7 @@ Castle.add = (id, def) => { def.id = id; Castle.areas[id] = def; };
   }
   const cellOf = (x, y) => { const gx = Math.floor((x - nav.x0) * RES), gy = Math.floor((y - nav.y0) * RES); return gx < 0 || gy < 0 || gx >= nav.gw || gy >= nav.gh ? -1 : gy * nav.gw + gx; };
   const zAt = (x, y) => { const c = cellOf(x, y); return c < 0 ? NaN : nav.z[c]; };
-  const STEP = 0.3;
+  const STEP = 0.42;
   function canStep(x, y, z) { const nz = zAt(x, y); return !(nz !== nz) && Math.abs(nz - z) <= STEP; }
   function nearest(x, y, z, R) {      // closest walkable point to (x,y) at about height z
     let best = null, bd = 1e9; const n = Math.ceil((R || 1.6) * RES), gx0 = Math.floor((x - nav.x0) * RES), gy0 = Math.floor((y - nav.y0) * RES);
